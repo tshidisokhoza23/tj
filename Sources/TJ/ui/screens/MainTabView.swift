@@ -116,7 +116,7 @@ public struct MainTabView: View {
                         )
 
                     case .jobs:
-                        JobProfileView(onClose: {})
+                        JobsHomeView()
 
                     case .mingle:
                         ConnectedMingleFeedView(
@@ -278,7 +278,7 @@ public struct MainTabView: View {
             case .ride:
                 RideHomeView()
             case .jobs:
-                JobProfileView(onClose: { activeSheetRoute = nil })
+                JobsHomeView()
             case .vocab:
                 VocabView()
             case .wallet:

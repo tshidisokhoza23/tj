@@ -55,7 +55,18 @@ public struct ChatTabView: View {
     }
 
     private var regularChats: [ChatMessage] {
-        (viewModel.uiState.chats.data ?? []).filter { !$0.isSecretMingleChat && $0.type != .channel }
+        (viewModel.uiState.chats.data ?? []).filter {
+            !$0.isSecretMingleChat && $0.type != .channel && $0.type != .jobChat
+        }
+    }
+
+    private var jobChats: [ChatMessage] {
+        let rows = (viewModel.uiState.chats.data ?? []).filter { $0.type == .jobChat && !$0.isArchived }
+        if searchQuery.isEmpty { return rows }
+        return rows.filter {
+            $0.consistentName().localizedCaseInsensitiveContains(searchQuery) ||
+            $0.lastMessage.localizedCaseInsensitiveContains(searchQuery)
+        }
     }
 
     private var chatsList: [ChatMessage] {
@@ -470,31 +481,28 @@ public struct ChatTabView: View {
     // MARK: - Jobs Tab Content
 
     private var jobsTabContent: some View {
-        ZStack(alignment: .bottomTrailing) {
-            let jobList = jobViewModel.jobs.data ?? []
-            JobListView(
-                jobs: jobList,
-                onJobClick: { job in
-                    activeJobDetail = job
+        Group {
+            if jobChats.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "briefcase")
+                        .font(.system(size: 40))
+                        .foregroundColor(.secondary)
+                    Text("No job chats yet")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
                 }
-            )
-
-            // Floating Post Job Action Button (FAB)
-            Button(action: { showPostJob = true }) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(Color.appPrimary)
-                        .frame(width: 56, height: 56)
-                        .shadow(color: Color.appPrimary.opacity(0.35), radius: 6, x: 0, y: 3)
-                    Image(systemName: "briefcase.fill")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(jobChats) { chat in
+                            ChatItemRow(chat: chat, onAvatarClick: { infoChat = chat })
+                                .onTapGesture { onChatSelected(chat) }
+                            Divider().padding(.leading, 72)
+                        }
+                    }
                 }
             }
-            .padding(24)
-        }
-        .sheet(isPresented: $showPostJob) {
-            PostJobView(onBack: { showPostJob = false })
         }
     }
 

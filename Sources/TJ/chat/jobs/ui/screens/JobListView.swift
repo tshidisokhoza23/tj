@@ -1,5 +1,41 @@
 import SwiftUI
 
+public struct JobsHomeView: View {
+    @StateObject private var viewModel = JobViewModel()
+    @State private var selected: Job?
+    @State private var showPostJob = false
+
+    public init() {}
+
+    public var body: some View {
+        NavigationStack {
+            ZStack(alignment: .bottomTrailing) {
+                JobListView(jobs: viewModel.jobs.data ?? []) { selected = $0 }
+                Button(action: { showPostJob = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(Color.appPrimary)
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .padding(24)
+                }
+            }
+            .navigationTitle("Jobs")
+        }
+        .sheet(item: $selected) { job in
+            JobDetailView(
+                job: job,
+                onBack: { selected = nil },
+                onApply: { viewModel.applyForJob(jobId: job.id) }
+            )
+        }
+        .sheet(isPresented: $showPostJob) {
+            PostJobView(onBack: { showPostJob = false })
+        }
+    }
+}
+
 public struct JobListView: View {
     public let jobs: [Job]
     public var topBarHeight: CGFloat = 0
