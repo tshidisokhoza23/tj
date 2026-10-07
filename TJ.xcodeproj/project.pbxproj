@@ -1344,165 +1344,165 @@
 			path = ui;
 			sourceTree = "<group>";
 		};
-		"TEMP_02E73BAF-A2BC-4C1C-80C9-D7C1C6985A34" /* domain */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = domain;
-			sourceTree = "<group>";
-		};
-		"TEMP_03A35E73-343E-44B4-9E9D-6F1D6CDCF5AE" /* domain */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = domain;
-			sourceTree = "<group>";
-		};
-		"TEMP_0F2FF9C7-71C6-4F3D-A703-B5392B2CF973" /* rewards */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = rewards;
-			sourceTree = "<group>";
-		};
-		"TEMP_4C730184-7A9D-4955-9424-9ACEC710A455" /* data */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = data;
-			sourceTree = "<group>";
-		};
-		"TEMP_72190FB7-B4F2-45EB-9ECE-9BFB2E71C1CA" /* domain */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = domain;
-			sourceTree = "<group>";
-		};
-		"TEMP_7E973688-EA34-4DB6-B870-D8F83D85E725" /* local */ = {
+		"TEMP_0B4D0F48-7CF5-4115-82B5-28A5954D722F" /* local */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = local;
 			sourceTree = "<group>";
 		};
-		"TEMP_8082213A-098E-4E62-A9B1-D63078CF89D2" /* domain */ = {
+		"TEMP_0F907A00-36FD-46E7-9FB4-ECC3AE634BAF" /* domain */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = domain;
 			sourceTree = "<group>";
 		};
-		"TEMP_8A7CBAA1-6ECF-4877-BCFC-8DEBA21A3C95" /* domain */ = {
+		"TEMP_116A0BF2-F751-4381-80D2-5FDADEEC2567" /* domain */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = domain;
 			sourceTree = "<group>";
 		};
-		"TEMP_8FDF894E-322B-4E7A-9D8A-A2CC656A0604" /* domain */ = {
+		"TEMP_1211FFBF-1813-4E93-B22F-BA8AE046F847" /* domain */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = domain;
 			sourceTree = "<group>";
 		};
-		"TEMP_901F672D-6720-419D-88DE-643A078FB27C" /* local */ = {
+		"TEMP_1DFD07E5-6468-4458-8552-FC9D0A4AC775" /* data */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = data;
+			sourceTree = "<group>";
+		};
+		"TEMP_1E829A88-9A4D-470F-87D4-D7D6D2CAF304" /* local */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = local;
 			sourceTree = "<group>";
 		};
-		"TEMP_960DA446-25A9-42F7-878F-7BCB541A1B17" /* data */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = data;
-			sourceTree = "<group>";
-		};
-		"TEMP_985F657E-3B6F-4069-8588-1D7567FA3E17" /* data */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = data;
-			sourceTree = "<group>";
-		};
-		"TEMP_9B157BBD-8F83-4883-8614-F945D93FDB55" /* screens */ = {
+		"TEMP_2C223FB6-1AE7-4A99-BF74-75654F020B0A" /* screens */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = screens;
 			sourceTree = "<group>";
 		};
-		"TEMP_9E889D1D-3072-43CC-8E50-2F75250CCB64" /* domain */ = {
+		"TEMP_44F4EF1B-49A7-4AAA-A73D-B6210B8A8D2F" /* domain */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = domain;
 			sourceTree = "<group>";
 		};
-		"TEMP_A399366A-7F65-419C-9D13-8A4862195B34" /* domain */ = {
+		"TEMP_5031AB4A-726D-4541-BA0E-45107D89EF0F" /* data */ = {
 			isa = PBXGroup;
 			children = (
 			);
-			path = domain;
+			path = data;
 			sourceTree = "<group>";
 		};
-		"TEMP_A5E75A0B-42CF-4C0E-B216-7E7A2D98BCCD" /* local */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = local;
-			sourceTree = "<group>";
-		};
-		"TEMP_B195AD71-165A-4DC7-A118-1F3BE10650D9" /* ui */ = {
+		"TEMP_547A8D4F-8C4C-44CD-B5E7-438DB43F36B4" /* ui */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = ui;
 			sourceTree = "<group>";
 		};
-		"TEMP_C4497F50-F9C4-4B82-B283-F8E0DBB751FB" /* screens */ = {
+		"TEMP_5F564177-77BF-454D-9199-7BAB03ABBCBC" /* screens */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = screens;
 			sourceTree = "<group>";
 		};
-		"TEMP_CCBCAFB3-E21F-4D0D-A820-B64715B35006" /* local */ = {
+		"TEMP_71CCE5AA-EC73-4038-8B56-47E240F45D41" /* domain */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = domain;
+			sourceTree = "<group>";
+		};
+		"TEMP_7812536A-DB2A-4DBA-AD59-F7D51F1183B4" /* local */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = local;
 			sourceTree = "<group>";
 		};
-		"TEMP_CF5B1647-F4A5-481C-B586-52E10E79920A" /* data */ = {
+		"TEMP_7B084985-6DD8-42A8-B90F-B9A0E0CD4C9F" /* domain */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = domain;
+			sourceTree = "<group>";
+		};
+		"TEMP_8B0FE120-B008-418F-A6BB-4A2F6AD946B1" /* local */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = local;
+			sourceTree = "<group>";
+		};
+		"TEMP_9CE9FF31-9834-4BB1-B289-01ADBD51685A" /* rewards */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = rewards;
+			sourceTree = "<group>";
+		};
+		"TEMP_A7E7B3AC-AA8B-4C16-A9BF-07371E50BE04" /* domain */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = domain;
+			sourceTree = "<group>";
+		};
+		"TEMP_C4078D32-1C8E-4821-9BE2-B50B01890D07" /* data */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = data;
 			sourceTree = "<group>";
 		};
-		"TEMP_DBF55FB8-F6A0-4716-A3AE-6ADC04ABFCB1" /* domain */ = {
+		"TEMP_C50E85F8-42F5-461F-85A3-F25E19867E63" /* domain */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = domain;
 			sourceTree = "<group>";
 		};
-		"TEMP_EE1B6596-4270-43BD-B124-8F752ECC2064" /* local */ = {
+		"TEMP_CC003A86-72AD-434A-B93F-3E8C4A5B7F7B" /* domain */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = domain;
+			sourceTree = "<group>";
+		};
+		"TEMP_CECBA533-E8E7-4C52-ABE2-4D24D9E7D2EE" /* data */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = data;
+			sourceTree = "<group>";
+		};
+		"TEMP_DC5D6429-FAAE-4991-B55D-EE5C015D48A1" /* domain */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = domain;
+			sourceTree = "<group>";
+		};
+		"TEMP_F99C7CB9-1D03-4E37-B962-8DF4ACC63BA0" /* local */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = local;
-			sourceTree = "<group>";
-		};
-		"TEMP_F8D7B50E-45C2-48CF-AD18-7271927A5D42" /* domain */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = domain;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
