@@ -143,24 +143,16 @@ struct PostDetailView: View {
                         Text(status.isEmpty ? "No replies yet" : status)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 8)
                     } else {
-                        ForEach(replies) { reply in
-                            FeedPostCard(
-                                post: reply,
-                                onOpen: {},
-                                onProfile: {
-                                    if !reply.authorId.isEmpty { onProfileClick(reply.authorId) }
-                                },
-                                onReply: { draft = reply.authorHandle.isEmpty ? "" : "@\(reply.authorHandle) " },
-                                onRepost: { Task { await MediaActions.repostReply(reply.id) } },
-                                onLike: { Task { await MediaActions.likeReply(reply.id) } },
-                                onSave: { Task { await MediaActions.bookmarkReply(reply.id) } },
-                                onShare: {
-                                    MediaActions.shareSheet(reply)
-                                    Task { await MediaActions.share(reply.id) }
-                                },
-                                onMore: { Task { await MediaActions.report(reply.id, reason: "report") } }
-                            )
+                        ForEach(Array(replies.enumerated()), id: \.element.id) { index, reply in
+                            ReplyRow(reply: reply, onProfile: {
+                                if !reply.authorId.isEmpty { onProfileClick(reply.authorId) }
+                            })
+                            if (index + 1) % 5 == 0 {
+                                StableReplyAd(slot: "reply-\(post.id)-\(index)")
+                            }
                         }
                     }
                     HStack {
@@ -250,16 +242,29 @@ struct PostDetailView: View {
     }
 
     private func loadReplies() async {
+        status = replies.isEmpty ? "Loading replies..." : ""
         var data = try? await API.data("media/posts/\(post.id)/replies")
         if data == nil {
             data = try? await API.data("posts/\(post.id)/replies")
         }
         guard let data else {
-            status = "Could not load replies"
+            status = replies.isEmpty ? "Could not load replies" : ""
             return
         }
+        let parsed = Self.replies(from: data)
+        if !parsed.isEmpty || replies.isEmpty {
+            replies = parsed
+        }
+        status = replies.isEmpty ? "No replies yet" : ""
+    }
+
+    static func replies(from data: Data) -> [FeedPost] {
         let rows = LiveJSON.list(data, keys: ["replies", "items", "data"])
         let parsed = rows.compactMap { row -> FeedPost? in
+            let type = LiveJSON.string(row["type"]).uppercased()
+            if type.contains("AD") && row["reply"] == nil && row["post"] == nil {
+                return nil
+            }
             var nested = (row["reply"] as? [String: Any]) ?? (row["post"] as? [String: Any]) ?? row
             if LiveJSON.string(nested["id"]).isEmpty {
                 nested["id"] = LiveJSON.string(nested["reply_id"])
@@ -267,21 +272,102 @@ struct PostDetailView: View {
             if LiveJSON.string(nested["content"]).isEmpty {
                 nested["content"] = LiveJSON.string(nested["reply_text"])
             }
-            return LiveJSON.post(nested)
+            if LiveJSON.string(nested["author_name"]).isEmpty, let author = nested["author"] as? [String: Any] {
+                nested["author_name"] = LiveJSON.string(author["display_name"])
+            }
+            guard let reply = LiveJSON.post(nested) else { return nil }
+            let kind = reply.postType.uppercased()
+            if kind.contains("AD") || reply.id.hasPrefix("ad-") || reply.id.hasPrefix("native-ad") {
+                return nil
+            }
+            return reply
         }
-        replies = parsed
-        status = parsed.isEmpty ? "No replies yet" : ""
+        var seen = Set<String>()
+        return parsed.filter { seen.insert($0.id).inserted }
     }
 
     private func sendReply() async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        let mine = UserDefaults.standard.string(forKey: "tj_display_name") ?? "You"
+        let optimistic = FeedPost(
+            id: "local-\(UUID().uuidString)",
+            authorName: mine,
+            content: text,
+            postType: "reply",
+            timestamp: Int64(Date().timeIntervalSince1970)
+        )
+        replies.append(optimistic)
+        draft = ""
+        status = ""
         do {
             try await MediaActions.reply(post.id, text: text)
-            draft = ""
             await loadReplies()
         } catch {
+            replies.removeAll { $0.id == optimistic.id }
+            draft = text
             status = "Reply was not sent"
         }
+    }
+}
+
+private struct ReplyRow: View {
+    let reply: FeedPost
+    var onProfile: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Button(action: onProfile) {
+                Circle()
+                    .fill(Color.appPrimary.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                    .overlay(
+                        Text(String(reply.title.prefix(1)).uppercased())
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.appPrimary)
+                    )
+            }
+            .buttonStyle(.plain)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(reply.title.isEmpty ? "User" : reply.title)
+                        .font(.system(size: 14, weight: .bold))
+                        .lineLimit(1)
+                    if !reply.authorHandle.isEmpty {
+                        Text("@\(reply.authorHandle)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                Text(reply.content.isEmpty ? " " : reply.content)
+                    .font(.system(size: 15))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct StableReplyAd: View {
+    let slot: String
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(UIColor.secondarySystemBackground))
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Sponsored")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.secondary)
+                NativeAdRow(slot: slot)
+            }
+            .padding(8)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 96)
+        .clipped()
     }
 }

@@ -35,6 +35,8 @@ public struct FeedPost: Identifiable, Codable, Sendable {
     var originalMediaURLs: [String]
     var originalMediaType: String
     var originalPostType: String
+    var latestReplyAuthor: String
+    var latestReplyText: String
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -87,7 +89,9 @@ public struct FeedPost: Identifiable, Codable, Sendable {
         originalContent: String = "",
         originalMediaURLs: [String] = [],
         originalMediaType: String = "",
-        originalPostType: String = ""
+        originalPostType: String = "",
+        latestReplyAuthor: String = "",
+        latestReplyText: String = ""
     ) {
         self.id = id
         self.authorId = authorId
@@ -119,6 +123,8 @@ public struct FeedPost: Identifiable, Codable, Sendable {
         self.originalMediaURLs = originalMediaURLs
         self.originalMediaType = originalMediaType
         self.originalPostType = originalPostType
+        self.latestReplyAuthor = latestReplyAuthor
+        self.latestReplyText = latestReplyText
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -175,6 +181,8 @@ public struct FeedPost: Identifiable, Codable, Sendable {
         originalMediaURLs = []
         originalMediaType = ""
         originalPostType = ""
+        latestReplyAuthor = ""
+        latestReplyText = ""
     }
 
     private static func flexInt(_ c: KeyedDecodingContainer<CodingKeys>, _ key: CodingKeys) -> Int {
@@ -378,6 +386,9 @@ struct SocialFeedView: View {
     public var onDirectMessagesClick: () -> Void = {}
 
     @State private var posts: [FeedPost] = []
+    @State private var nextOffset = 0
+    @State private var hasMore = true
+    @State private var loadingMore = false
     @State private var status = "Loading social feed..."
     @State private var draft = ""
     @State private var selectedCategory = 0
@@ -433,7 +444,10 @@ struct SocialFeedView: View {
                         let isSelected = selectedCategory == idx
                         Button(action: {
                             selectedCategory = idx
-                            Task { await load() }
+                            posts = []
+                            nextOffset = 0
+                            hasMore = true
+                            Task { await load(reset: true) }
                         }) {
                             Text(categories[idx].1)
                                 .font(.system(size: 13, weight: .black))
@@ -462,24 +476,35 @@ struct SocialFeedView: View {
                 } else {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(posts.enumerated()), id: \.element.id) { index, post in
-                                FeedPostCard(
-                                    post: post,
-                                    onOpen: { selectedPost = post },
-                                    onProfile: { onProfileClick(post.authorId) },
-                                    onReply: { selectedPost = post },
-                                    onRepost: { repostTarget = post },
-                                    onLike: { toggleLike(post.id) },
-                                    onSave: { toggleSave(post.id) },
-                                    onShare: { share(post.id) },
-                                    onMore: { moreTarget = post }
-                                )
-                                if (index + 1) % 4 == 0 {
-                                    NativeAdRow(slot: "feed-\(post.id)")
+                            ForEach(feedEntries) { entry in
+                                switch entry.kind {
+                                case .post(let post):
+                                    FeedPostCard(
+                                        post: post,
+                                        onOpen: { selectedPost = post },
+                                        onProfile: { onProfileClick(post.authorId) },
+                                        onReply: { selectedPost = post },
+                                        onRepost: { repostTarget = post },
+                                        onLike: { toggleLike(post.id) },
+                                        onSave: { toggleSave(post.id) },
+                                        onShare: { share(post.id) },
+                                        onMore: { moreTarget = post }
+                                    )
+                                    .id(post.id)
+                                case .ad(let slot):
+                                    StableFeedAd(slot: slot)
+                                        .id(slot)
                                 }
+                            }
+                            if hasMore {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .onAppear { Task { await load(reset: false) } }
                             }
                         }
                     }
+                    .transaction { $0.animation = nil }
                 }
             }
         }
@@ -518,7 +543,7 @@ struct SocialFeedView: View {
                 showCreatePost = false
                 Task {
                     try? await MediaActions.create(content: text, mediaURLs: media)
-                    await load()
+                    await load(reset: true)
                 }
             }
         }
@@ -560,7 +585,7 @@ struct SocialFeedView: View {
                         quoteTarget = nil
                         Task {
                             try? await MediaActions.quote(post.id, text: text)
-                            await load()
+                            await load(reset: true)
                         }
                     }
                     .disabled(quoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -576,8 +601,8 @@ struct SocialFeedView: View {
                 }
             }
         }
-        .task { await load() }
-        .refreshable { await load() }
+        .task { await load(reset: posts.isEmpty) }
+        .refreshable { await load(reset: true) }
     }
 
     private func postIndex(_ id: String) -> Int? {
@@ -620,7 +645,7 @@ struct SocialFeedView: View {
             let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
             draft = ""
             try await MediaActions.create(content: text, mediaURLs: [url])
-            await load()
+            await load(reset: true)
         } catch {
             status = error.localizedDescription
         }
@@ -639,23 +664,108 @@ struct SocialFeedView: View {
         selectedPost = post
     }
 
-    private func load() async {
-        var query = ["limit": "20", "offset": "0"]
+    private var feedEntries: [SocialFeedEntry] {
+        var rows: [SocialFeedEntry] = []
+        for (index, post) in posts.enumerated() where !post.id.isEmpty {
+            rows.append(SocialFeedEntry(kind: .post(post)))
+            if (index + 1) % 5 == 0 {
+                rows.append(SocialFeedEntry(kind: .ad("ad-feed-\(post.id)")))
+            }
+        }
+        return rows
+    }
+
+    private func load(reset: Bool) async {
+        if loadingMore { return }
+        if !reset && !hasMore { return }
+        loadingMore = true
+        defer { loadingMore = false }
+        let pageOffset = reset ? 0 : nextOffset
+        var query = ["limit": "15", "offset": "\(pageOffset)"]
         let categoryId = categories[selectedCategory].0
         if categoryId != "all" { query["category_id"] = categoryId }
-        if posts.isEmpty, let cached = AppDiskCache.loadResponse(path: "media/feed", query: query) {
+        if reset && posts.isEmpty, let cached = AppDiskCache.loadResponse(path: "media/feed", query: query) {
             let parsed = LiveJSON.posts(from: cached)
-            posts = parsed.isEmpty ? FeedPost.decodeList(cached) : parsed
+            posts = organicPosts(parsed.isEmpty ? FeedPost.decodeList(cached) : parsed)
             if !posts.isEmpty { status = "" }
         }
         do {
             let data = try await API.data("media/feed", query: query)
             let parsed = LiveJSON.posts(from: data)
-            posts = parsed.isEmpty ? FeedPost.decodeList(data) : parsed
+            let incoming = organicPosts(parsed.isEmpty ? FeedPost.decodeList(data) : parsed)
+            apply(incoming, reset: reset)
+            nextOffset = pageOffset + incoming.count
+            hasMore = incoming.count >= 15
             status = posts.isEmpty ? "No posts yet" : ""
         } catch {
             if posts.isEmpty { status = error.localizedDescription }
         }
+    }
+
+    private func organicPosts(_ list: [FeedPost]) -> [FeedPost] {
+        list.filter { post in
+            let type = post.postType.uppercased()
+            return !post.id.isEmpty && type != "AD" && type != "AD_UNIT" && type != "NATIVE_AD" && !post.id.hasPrefix("ad-")
+        }
+    }
+
+    /// Updates rows in place. A refresh only inserts posts that were not already on screen.
+    private func apply(_ incoming: [FeedPost], reset: Bool) {
+        if posts.isEmpty {
+            posts = incoming
+            return
+        }
+        var indexByID = Dictionary(uniqueKeysWithValues: posts.enumerated().map { ($0.element.id, $0.offset) })
+        if reset {
+            let fresh = incoming.filter { indexByID[$0.id] == nil }
+            if !fresh.isEmpty {
+                posts.insert(contentsOf: fresh, at: 0)
+                indexByID = Dictionary(uniqueKeysWithValues: posts.enumerated().map { ($0.element.id, $0.offset) })
+            }
+        }
+        for post in incoming {
+            if let index = indexByID[post.id] {
+                posts[index] = post
+            } else if !reset {
+                posts.append(post)
+                indexByID[post.id] = posts.count - 1
+            }
+        }
+    }
+}
+
+private struct SocialFeedEntry: Identifiable {
+    enum Kind { case post(FeedPost), ad(String) }
+    let kind: Kind
+    var id: String {
+        switch kind {
+        case .post(let post): return "post-\(post.id)"
+        case .ad(let slot): return slot
+        }
+    }
+}
+
+private struct StableFeedAd: View {
+    let slot: String
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(UIColor.secondarySystemBackground))
+            VStack(spacing: 4) {
+                Text("Sponsored")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                NativeAdRow(slot: slot)
+            }
+            .padding(10)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 132)
+        .clipped()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 }
 
@@ -837,6 +947,21 @@ struct FeedPostCard: View {
                 onSave: onSave,
                 onShare: onShare
             )
+            if !post.latestReplyText.isEmpty {
+                HStack(alignment: .top, spacing: 6) {
+                    Text(post.latestReplyAuthor.isEmpty ? "Reply" : post.latestReplyAuthor)
+                        .font(.system(size: 13, weight: .bold))
+                        .lineLimit(1)
+                    Text(post.latestReplyText)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
+                }
+                .frame(minHeight: 32, alignment: .topLeading)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onOpen)
+            }
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 16)
