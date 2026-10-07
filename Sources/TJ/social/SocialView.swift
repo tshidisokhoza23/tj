@@ -135,7 +135,22 @@ struct SocialView: View {
             }
             .navigationBarHidden(true)
             .sheet(isPresented: $showingCreatePost) {
-                CreatePostSheet()
+                CreatePostSheet { text, urls in
+                    socialViewModel.posts.insert(
+                        SocialPost(
+                            id: UUID().uuidString,
+                            authorName: "You",
+                            authorAvatar: "",
+                            timestamp: "Just now",
+                            textContent: text,
+                            imageUrl: urls.first,
+                            likesCount: 0,
+                            commentsCount: 0,
+                            isLiked: false
+                        ),
+                        at: 0
+                    )
+                }
             }
             .sheet(item: $selectedPostForComments) { post in
                 CommentsSheetView(post: post)

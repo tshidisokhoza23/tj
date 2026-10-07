@@ -30,6 +30,15 @@ public class StorageManager: ObservableObject {
         }
     }
 
+    public func formattedCacheSize() -> String {
+        String(format: "%.1f MB", cacheSizeMB)
+    }
+
+    public func clearCache(_ completion: @escaping () -> Void) {
+        clearAllCache()
+        completion()
+    }
+
     public func clearAllCache() {
         URLCache.shared.removeAllCachedResponses()
         let fileManager = FileManager.default

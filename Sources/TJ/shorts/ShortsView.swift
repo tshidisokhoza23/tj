@@ -127,19 +127,7 @@ struct ShortsView: View {
                 ShortOptionsBottomSheet(
                     video: video,
                     isOwner: video.creatorName == "@dev_vibes",
-                    onMessageAuthor: {
-                        let newChat = ChatItem(
-                            id: UUID().uuidString,
-                            name: video.creatorName,
-                            lastMessage: "Hi! Saw your video: \(video.videoTitle)",
-                            timestamp: "Just now",
-                            unreadCount: 0,
-                            avatarUrl: video.creatorAvatar,
-                            isOnline: true
-                        )
-                        chatViewModel.chats.insert(newChat, at: 0)
-                        chatViewModel.activeChat = newChat
-                    },
+                    onMessageAuthor: {},
                     onCopyLink: {},
                     onSaveToGallery: {},
                     onNotInterested: {
