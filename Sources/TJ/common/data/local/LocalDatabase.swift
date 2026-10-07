@@ -439,9 +439,9 @@ public actor LocalDatabase {
                 timestamp: time,
                 unreadCount: isFromMe ? 0 : 1,
                 otherUserId: otherUserId.isEmpty ? nil : otherUserId,
-                isGroup: type == .group,
                 lastMessageIsFromMe: isFromMe,
-                lastMessageRead: isRead
+                lastMessageRead: isRead,
+                isGroup: type == .group
             )
         }
         persist()
