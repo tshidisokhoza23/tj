@@ -1,3 +1,4 @@
+#if false
 import Foundation
 import Combine
 
@@ -212,3 +213,5 @@ class NetworkClient: ObservableObject {
         }
     }
 }
+
+#endif

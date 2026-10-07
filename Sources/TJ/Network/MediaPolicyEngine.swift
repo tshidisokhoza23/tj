@@ -1,6 +1,6 @@
 import Foundation
 
-enum MediaType {
+enum PolicyMediaKind {
     case photo
     case audio
     case video
@@ -35,7 +35,7 @@ class MediaPolicyEngine {
 
     private let networkMonitor = NetworkMonitor.shared
 
-    func canAutoDownload(type: MediaType, settings: DataSettingsState) -> Bool {
+    func canAutoDownload(type: PolicyMediaKind, settings: DataSettingsState) -> Bool {
         let status = networkMonitor.status
         guard status.isConnected else { return false }
 

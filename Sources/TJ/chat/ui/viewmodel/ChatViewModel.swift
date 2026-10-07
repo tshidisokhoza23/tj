@@ -293,32 +293,41 @@ public class ChatViewModel: ObservableObject {
                 uiState.messages = .success(ChatExpiry.dropExpired(first, chatId: chatId))
             }
         }
+        let stored = await AppRuntime.chatRepository.getMessages(chatId: chatId).data ?? []
+        if uiState.messages.data == nil, !stored.isEmpty {
+            uiState.messages = .success(ChatExpiry.dropExpired(stored, chatId: chatId))
+        }
         do {
             let data = try await API.data("conversations/\(chatId)/messages")
             let server = LiveJSON.messages(from: data, myUserId: SessionStore.shared.userId)
-            let local = uiState.messages.data ?? []
+            let local = uiState.messages.data ?? stored
             let now = Int64(Date().timeIntervalSince1970 * 1000)
             var merged = server
             for msg in local {
                 let exists = merged.contains { $0.id == msg.id || ($0.clientId != nil && $0.clientId == msg.clientId) }
                 if exists { continue }
-                if msg.status == .sending || msg.status == .failed || now - msg.timestamp < 120_000 {
+                if msg.status == .sending || msg.status == .failed || now - msg.timestamp < 120_000 || server.isEmpty {
                     merged.append(msg)
                 }
             }
+            if merged.isEmpty && !local.isEmpty {
+                uiState.error = "Could not refresh messages"
+                return
+            }
             merged.sort { $0.timestamp < $1.timestamp }
+            uiState.error = nil
             uiState.messages = .success(ChatExpiry.dropExpired(merged, chatId: chatId))
         } catch {
             uiState.error = "Could not load messages"
             if uiState.messages.data == nil {
-                uiState.messages = .error("Could not load messages", [])
+                uiState.messages = .error("Could not load messages", stored)
             }
         }
     }
 
     public func clearActiveChat() {
         activeChatId = nil
-        uiState.messages = .success([])
+        livePoll?.cancel()
     }
 
     public func sendMessage(

@@ -22,6 +22,11 @@ jobs:
       - name: Generate Xcode Project
         run: xcodegen generate --spec project.yml
 
+      - name: Enforce Xcode 15 Compatibility Format
+        run: |
+          sed -i '' 's/objectVersion = [0-9]*/objectVersion = 56/g' TJ.xcodeproj/project.pbxproj
+          sed -i '' 's/compatibilityVersion = ".*";/compatibilityVersion = "Xcode 15.0";/g' TJ.xcodeproj/project.pbxproj
+
       - name: Resolve Package Dependencies
         run: xcodebuild -resolvePackageDependencies -project TJ.xcodeproj -scheme TJ || true
 

@@ -1,3 +1,4 @@
+#if false
 import Foundation
 import Combine
 
@@ -184,3 +185,5 @@ class WebSocketManager: ObservableObject {
         connectionState = .disconnected
     }
 }
+
+#endif

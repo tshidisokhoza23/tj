@@ -1,3 +1,4 @@
+#if false
 import Foundation
 import Contacts
 import Combine
@@ -217,3 +218,5 @@ class ContactsManager: ObservableObject {
         }
     }
 }
+
+#endif

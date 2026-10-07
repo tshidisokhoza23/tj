@@ -1860,35 +1860,6 @@ private struct VerticalShortsPlayer: UIViewControllerRepresentable {
     }
 }
 
-private struct SocialMenuSheet: View {
-    var onProfile: () -> Void
-    var onCreate: () -> Void
-    var onNotifications: () -> Void
-    var onMessages: () -> Void
-    var onSettings: () -> Void
-    var onSaved: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Social").font(.headline).padding(.top, 16).padding(.bottom, 8)
-            menuRow("View Profile", onProfile)
-            menuRow("Create Post", onCreate)
-            menuRow("Notifications", onNotifications)
-            menuRow("Direct Messages", onMessages)
-            menuRow("Settings", onSettings)
-            menuRow("Saved Posts", onSaved)
-            Spacer()
-        }
-        .padding(.horizontal, 24)
-    }
-
-    private func menuRow(_ title: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).foregroundColor(.primary).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
-        }
-    }
-}
-
 struct SocialNoteItem: Identifiable {
     let id: String
     let title: String

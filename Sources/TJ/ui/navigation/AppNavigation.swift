@@ -140,6 +140,13 @@ struct LiveChatScreen: View {
                 viewModel.fetchMessages(chatId: match.id)
                 return
             }
+            // A conversation id must open that thread. Creating a DM from it
+            // opens a new empty chat and hides the existing messages.
+            if (try? await API.data("conversations/\(conversationId)/messages")) != nil {
+                chat = ChatMessage(id: conversationId, senderName: resolvedRouteName(name), otherUserId: nil)
+                viewModel.fetchMessages(chatId: conversationId)
+                return
+            }
             if let data = try? await API.data("chats/dm", method: "POST", json: ["contact_id": conversationId]),
                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let convID = json["conversation_id"] as? String, !convID.isEmpty {

@@ -1,3 +1,4 @@
+#if false
 import SwiftUI
 
 struct ContactPickerView: View {
@@ -113,3 +114,5 @@ struct ContactPickerView: View {
         }
     }
 }
+
+#endif

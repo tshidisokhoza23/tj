@@ -1,3 +1,4 @@
+#if false
 import SwiftUI
 import Combine
 
@@ -137,3 +138,5 @@ class ChatViewModel: ObservableObject {
         WebSocketManager.shared.send(type: "chat_message", payload: ["content": text, "chatId": targetChatId, "conversation_id": targetChatId])
     }
 }
+
+#endif

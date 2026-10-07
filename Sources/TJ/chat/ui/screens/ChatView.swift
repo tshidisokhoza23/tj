@@ -160,6 +160,13 @@ public struct ChatView: View {
         ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 4) {
+                        if messagesList.isEmpty, let error = viewModel.uiState.error, !error.isEmpty {
+                            Text(error)
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 24)
+                        }
                         ForEach(messagesList) { message in
                             MessageBubbleView(
                                 message: message,
