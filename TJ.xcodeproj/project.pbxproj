@@ -179,7 +179,6 @@
 		EB1B0F8D9DF6B3CAD9077FBD /* Conversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED5A2D1A9F75839783447C25 /* Conversation.swift */; };
 		EBACACE17B700E54B81E9A27 /* MainRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8D5D917B7BB2566F362768 /* MainRootView.swift */; };
 		ED53E354E795F99B2F50C317 /* DataSettingsState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887BFA0195F482231633472C /* DataSettingsState.swift */; };
-		F18EA8722280AE253BEF8E79 /* StorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E1A10C641164EF2917A98EA /* StorageManager.swift */; };
 		F2B360CB62641DE1B0B0297C /* ChatHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DEC0E50DADB31DFB8CC3A37 /* ChatHeaderView.swift */; };
 		F3020757616E64DC5B01A6FC /* WebRtcCallManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA971C89D29E2D37725EA898 /* WebRtcCallManager.swift */; };
 		F4939C089E555903637B998D /* ChangePhoneWizardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FFD370ED135BC8C155D9F7C /* ChangePhoneWizardView.swift */; };
@@ -247,7 +246,6 @@
 		3CD42A66A1FC7D15EF22A8DA /* AppLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogo.swift; sourceTree = "<group>"; };
 		3D0B3A3F225A900371D8AB1D /* WebSocketManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketManager.swift; sourceTree = "<group>"; };
 		3E0CCC65AB2A31AB3DDA73B4 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		3E1A10C641164EF2917A98EA /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
 		3E3607248860DF5A4CFF2736 /* DirectRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectRepository.swift; sourceTree = "<group>"; };
 		3EE39CD46A870EF2032CC036 /* VoiceNoteController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceNoteController.swift; sourceTree = "<group>"; };
 		3F23BBEEFA88E6A85E3A4CC3 /* VocabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabView.swift; sourceTree = "<group>"; };
@@ -877,14 +875,6 @@
 			path = account;
 			sourceTree = "<group>";
 		};
-		86C86C0BD4F4151CA2CF2529 /* Storage */ = {
-			isa = PBXGroup;
-			children = (
-				3E1A10C641164EF2917A98EA /* StorageManager.swift */,
-			);
-			path = Storage;
-			sourceTree = "<group>";
-		};
 		8815FB538F1B52E4D6582A2E /* shorts */ = {
 			isa = PBXGroup;
 			children = (
@@ -926,7 +916,6 @@
 				407AA2B80B32E7266152D7FD /* settings */,
 				8815FB538F1B52E4D6582A2E /* shorts */,
 				427710B0BDC789166ED0487E /* social */,
-				86C86C0BD4F4151CA2CF2529 /* Storage */,
 				35AFE610E93352291B0ACA34 /* stories */,
 				C61AA355A628506E24F696E1 /* Theme */,
 				20BAB3A72ED78F42FA1EEA64 /* ui */,
@@ -1330,165 +1319,165 @@
 			path = ui;
 			sourceTree = "<group>";
 		};
-		"TEMP_0AD51D24-4545-4967-A820-B063FADDB371" /* data */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = data;
-			sourceTree = "<group>";
-		};
-		"TEMP_0E4AA617-BC5A-4561-AE3F-75D3B2D44F3D" /* rewards */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = rewards;
-			sourceTree = "<group>";
-		};
-		"TEMP_16B05956-8A40-4FE3-B9A1-66DCFBF17434" /* domain */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = domain;
-			sourceTree = "<group>";
-		};
-		"TEMP_3A838749-1629-46E9-AB19-21D418A4B7CF" /* local */ = {
+		"TEMP_17C641F4-8378-4758-B643-8FD4813F8571" /* local */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = local;
 			sourceTree = "<group>";
 		};
-		"TEMP_43BFDFA2-9B67-46BA-83AC-35D84DFDDE1B" /* screens */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = screens;
-			sourceTree = "<group>";
-		};
-		"TEMP_479C5830-55ED-4844-8F20-9F811A3E9CFA" /* data */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = data;
-			sourceTree = "<group>";
-		};
-		"TEMP_53F72D94-BB77-4E29-A798-C36D05D69CF0" /* domain */ = {
+		"TEMP_28766B83-89B0-4163-AEDD-AD04488A51F8" /* domain */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = domain;
 			sourceTree = "<group>";
 		};
-		"TEMP_75983286-1536-466D-AB34-7BCA07B4752C" /* data */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = data;
-			sourceTree = "<group>";
-		};
-		"TEMP_8BCC0127-D028-4F89-A9D6-A10B05B6DA7E" /* domain */ = {
+		"TEMP_28C0954F-753F-49F7-A943-DBACAD4CFE6A" /* domain */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = domain;
 			sourceTree = "<group>";
 		};
-		"TEMP_9ACAFC80-E699-44E5-BF97-0E9BB33FB9E4" /* data */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = data;
-			sourceTree = "<group>";
-		};
-		"TEMP_AFB3F4FC-2F29-4023-B2A7-F3A020A07784" /* domain */ = {
+		"TEMP_34438781-EB76-413A-A5B0-11B0B7AB6BAE" /* domain */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = domain;
 			sourceTree = "<group>";
 		};
-		"TEMP_B3CD2FDE-F9DC-4495-B3AE-CDA189ACAE2A" /* domain */ = {
+		"TEMP_3BB6D001-3FCE-404F-AB47-BA9FF5FE61BC" /* domain */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = domain;
 			sourceTree = "<group>";
 		};
-		"TEMP_C93085D1-FBD0-4F7B-822F-09D0F1606B2C" /* screens */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = screens;
-			sourceTree = "<group>";
-		};
-		"TEMP_D9755ECD-907F-46D4-B16C-BF89B751E7B8" /* local */ = {
+		"TEMP_3C7EA042-CB1D-4EC2-86D9-E3B5996CACCE" /* local */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = local;
 			sourceTree = "<group>";
 		};
-		"TEMP_DF4BE41E-8D84-4257-9A46-5DA254791C92" /* ui */ = {
+		"TEMP_51B67DCD-B6C8-4482-8A2D-C92ACED33477" /* screens */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = screens;
+			sourceTree = "<group>";
+		};
+		"TEMP_5BCE1973-D885-49BE-BB35-1BBC63FAE359" /* local */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = local;
+			sourceTree = "<group>";
+		};
+		"TEMP_6E49E69A-AA04-428A-87B4-81D66DB399F8" /* data */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = data;
+			sourceTree = "<group>";
+		};
+		"TEMP_73E2A650-9FA5-45C3-BD33-49162B9896ED" /* local */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = local;
+			sourceTree = "<group>";
+		};
+		"TEMP_78D803F1-EDAE-44C5-A46F-3189ECC295A2" /* ui */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = ui;
 			sourceTree = "<group>";
 		};
-		"TEMP_F3D7567E-36C8-44B1-9096-E40062F5A002" /* local */ = {
+		"TEMP_8012B535-8EC5-47E6-87EE-57328870CDE0" /* domain */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = domain;
+			sourceTree = "<group>";
+		};
+		"TEMP_81394504-2760-4018-8CA7-B01795CE7389" /* domain */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = domain;
+			sourceTree = "<group>";
+		};
+		"TEMP_824A7FA5-87B5-4C87-8B5B-E7899A6717CD" /* data */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = data;
+			sourceTree = "<group>";
+		};
+		"TEMP_9EED5DA3-CBEE-4995-A0A1-182B5B6915DD" /* data */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = data;
+			sourceTree = "<group>";
+		};
+		"TEMP_9F252935-5501-49BA-B8B8-1C03BFFB3B48" /* domain */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = domain;
+			sourceTree = "<group>";
+		};
+		"TEMP_A07F9B40-DC46-4DAF-9C50-75250DC727A9" /* domain */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = domain;
+			sourceTree = "<group>";
+		};
+		"TEMP_A75ADA54-AC7C-46ED-84DB-8A6ADD0AFA88" /* screens */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = screens;
+			sourceTree = "<group>";
+		};
+		"TEMP_B62F5C98-35A8-469C-BECA-77F8FBA56469" /* rewards */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = rewards;
+			sourceTree = "<group>";
+		};
+		"TEMP_C2A3CBA2-0A08-4D85-BBF6-C2B61157BAAC" /* domain */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = domain;
+			sourceTree = "<group>";
+		};
+		"TEMP_E84324A5-E737-426C-B2AA-A292775CF5F8" /* data */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = data;
+			sourceTree = "<group>";
+		};
+		"TEMP_EAA00C3F-6DC0-400A-8130-BA99C3A8FCC7" /* domain */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = domain;
+			sourceTree = "<group>";
+		};
+		"TEMP_EB126B56-DDD1-4CCB-BBB1-23E6081E8E2E" /* local */ = {
 			isa = PBXGroup;
 			children = (
 			);
 			path = local;
-			sourceTree = "<group>";
-		};
-		"TEMP_F51FDC69-78FB-45DD-A908-6E87F003875A" /* domain */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = domain;
-			sourceTree = "<group>";
-		};
-		"TEMP_F69243E4-BF6D-42CB-910E-38BD77F7BB5A" /* domain */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = domain;
-			sourceTree = "<group>";
-		};
-		"TEMP_FA38AF0E-B10A-407F-8636-222E80CE6CE1" /* domain */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = domain;
-			sourceTree = "<group>";
-		};
-		"TEMP_FC028750-CF95-444C-B3C0-BAFFEF5B274F" /* domain */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = domain;
-			sourceTree = "<group>";
-		};
-		"TEMP_FCB56172-C286-42F4-AB22-231932DE9B3C" /* local */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = local;
-			sourceTree = "<group>";
-		};
-		"TEMP_FDA3D39C-DE27-4A2B-B49D-E41FCE3C0E78" /* local */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = local;
-			sourceTree = "<group>";
-		};
-		"TEMP_FF2D2AE9-E342-437C-BFD8-F788D50DF633" /* domain */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = domain;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1724,7 +1713,6 @@
 				4FDFF64FBFE3BDD823E8B909 /* SocialView.swift in Sources */,
 				F639C1A7FB6F977579EB7068 /* StarredMessagesView.swift in Sources */,
 				9856A9A9DB33C0C6784BBBBA /* StarredMessagesViewModel.swift in Sources */,
-				F18EA8722280AE253BEF8E79 /* StorageManager.swift in Sources */,
 				E8754A399038C2B5DAB000D7 /* StorageManager.swift in Sources */,
 				83506C9C2A24BE44CFC4BBFF /* StoriesHeaderRow.swift in Sources */,
 				BFA41716DEA1352298590FAD /* StoriesRowView.swift in Sources */,
