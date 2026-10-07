@@ -193,7 +193,70 @@ public class ChatViewModel: ObservableObject {
             }
             fetchMessages(chatId: conversationId)
         }
+        restoreChatInList(
+            conversationId: conversationId,
+            preview: body,
+            timestamp: created,
+            fromMe: senderId == SessionStore.shared.userId,
+            senderName: text("sender_name").isEmpty ? text("conversation_title") : text("sender_name"),
+            otherUserId: senderId == SessionStore.shared.userId ? "" : senderId,
+            typeRaw: text("conversation_type").isEmpty ? text("type") : text("conversation_type")
+        )
         fetchChats()
+    }
+
+    /// Keeps a chat Android would recreate from a live message, even when the
+    /// server list still omits a conversation this user deleted.
+    private static func mergedChats(server: [ChatMessage], local: [ChatMessage]) -> [ChatMessage] {
+        var merged = server.filter { !$0.isSecretMingleChat }
+        let serverIds = Set(merged.map(\.id))
+        for chat in local where !chat.isSecretMingleChat && !serverIds.contains(chat.id) {
+            merged.append(chat)
+        }
+        merged.sort { $0.timestamp > $1.timestamp }
+        return merged
+    }
+
+    private func restoreChatInList(conversationId: String, preview: String, timestamp: Int64, fromMe: Bool, senderName: String, otherUserId: String, typeRaw: String) {
+        guard !conversationId.isEmpty else { return }
+        let raw = typeRaw.uppercased()
+        let type = ConversationType(rawValue: raw) ?? .direct
+        var list = uiState.chats.data ?? []
+        if let idx = list.firstIndex(where: { $0.id == conversationId }) {
+            if !preview.isEmpty { list[idx].lastMessage = preview }
+            list[idx].timestamp = max(list[idx].timestamp, timestamp)
+            list[idx].lastMessageIsFromMe = fromMe
+            if !fromMe && activeChatId != conversationId { list[idx].unreadCount += 1 }
+            if list[idx].senderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !senderName.isEmpty {
+                list[idx].senderName = senderName
+            }
+        } else {
+            list.insert(ChatMessage(
+                id: conversationId,
+                type: type,
+                senderName: senderName.isEmpty ? "Chat" : senderName,
+                lastMessage: preview,
+                timestamp: timestamp,
+                unreadCount: fromMe || activeChatId == conversationId ? 0 : 1,
+                isGroup: type == .group,
+                lastMessageIsFromMe: fromMe,
+                otherUserId: otherUserId.isEmpty ? nil : otherUserId
+            ), at: 0)
+        }
+        list.sort { $0.timestamp > $1.timestamp }
+        uiState.chats = .success(list.filter { !$0.isSecretMingleChat })
+        Task {
+            await LocalDatabase.shared.upsertChatFromMessage(
+                chatId: conversationId,
+                text: preview,
+                time: timestamp,
+                isFromMe: fromMe,
+                isRead: fromMe,
+                senderName: senderName,
+                otherUserId: otherUserId,
+                type: type
+            )
+        }
     }
 
     public func setActiveSubTab(_ tabIndex: Int) {
@@ -260,8 +323,9 @@ public class ChatViewModel: ObservableObject {
             }
             do {
                 let data = try await API.data("conversations")
-                let chats = await LiveJSON.enrichMissingProfiles(LiveJSON.chats(from: data))
-                self.uiState.chats = .success(chats.filter { !$0.isSecretMingleChat })
+                let server = await LiveJSON.enrichMissingProfiles(LiveJSON.chats(from: data))
+                let local = await AppRuntime.chatRepository.getChats().data ?? []
+                self.uiState.chats = .success(Self.mergedChats(server: server, local: local))
                 self.uiState.isChatsFetching = false
             } catch {
                 self.uiState.isChatsFetching = false
@@ -377,6 +441,16 @@ public class ChatViewModel: ObservableObject {
         var current = uiState.messages.data ?? []
         current.append(msg)
         uiState.messages = .success(current)
+        let known = uiState.chats.data?.first(where: { $0.id == chatId })
+        restoreChatInList(
+            conversationId: chatId,
+            preview: body,
+            timestamp: msg.timestamp,
+            fromMe: true,
+            senderName: known?.consistentName() ?? "",
+            otherUserId: known?.otherUserId ?? "",
+            typeRaw: known?.type.rawValue ?? "DIRECT"
+        )
 
         Task {
             let clientId = msg.id

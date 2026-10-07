@@ -158,7 +158,19 @@ public final class ChatRepositoryImpl: ChatRepository, @unchecked Sendable {
                 )
 
                 await localDb.upsertMessages([msg.toEntity(chatId: convId)])
-                await localDb.updateLastMessage(chatId: convId, text: text, time: msg.timestamp, isFromMe: msg.isFromMe, isRead: false)
+                let rawType = payload["conversation_type"]?.stringValue ?? payload["type"]?.stringValue ?? "DIRECT"
+                let chatType = ConversationType(rawValue: rawType.uppercased()) ?? .direct
+                let senderName = payload["sender_name"]?.stringValue ?? payload["conversation_title"]?.stringValue ?? ""
+                await localDb.upsertChatFromMessage(
+                    chatId: convId,
+                    text: text,
+                    time: msg.timestamp,
+                    isFromMe: msg.isFromMe,
+                    isRead: false,
+                    senderName: senderName,
+                    otherUserId: msg.isFromMe ? "" : senderId,
+                    type: chatType
+                )
                 if !msg.isFromMe {
                     await localDb.incrementUnread(chatId: convId)
                 }
@@ -316,31 +328,15 @@ public final class ChatRepositoryImpl: ChatRepository, @unchecked Sendable {
     }
 
     public func syncContacts(phoneNumbers: [String] = []) async -> Resource<[Contact]> {
-        let localContacts = ContactSyncManager.shared.fetchAllContacts()
-        let numbers = (phoneNumbers + localContacts.map { $0.phoneNumber }).filter { !$0.isEmpty }
-        guard !numbers.isEmpty else { return .success([]) }
-
-        do {
-            let response = try await chatApi.syncContacts(phoneNumbers: numbers)
-            let localByPhone = Dictionary(uniqueKeysWithValues: localContacts.map { ($0.phoneNumber, $0.displayName) })
-
-            let registered = response.contacts.map { apiUser in
-                let phone = apiUser.phoneNumber ?? ""
-                let name = localByPhone[phone] ?? apiUser.displayName
-                return Contact(
-                    id: apiUser.id,
-                    username: apiUser.username,
-                    displayName: name,
-                    avatarUrl: apiUser.avatarUrl,
-                    phoneNumber: phone,
-                    isRegistered: true
-                )
-            }
-            _ = await syncChats()
-            return .success(registered)
-        } catch {
-            return .error(error.localizedDescription)
+        if !phoneNumbers.isEmpty {
+            let extra = phoneNumbers.map { ContactInfo(displayName: "", phoneNumber: $0) }
+            _ = try? await API.data("users/persistent-contacts", method: "POST", json: [
+                "contacts": extra.map { ["name": $0.displayName, "phone_number": $0.phoneNumber] }
+            ])
         }
+        let synced = await ContactSyncManager.shared.syncAccountContacts()
+        _ = await syncChats()
+        return .success(synced)
     }
 
     public func getChats() async -> Resource<[ChatMessage]> {

@@ -412,16 +412,41 @@ public actor LocalDatabase {
     }
 
     public func updateLastMessage(chatId: String, text: String, time: Int64, isFromMe: Bool, isRead: Bool) {
+        upsertChatFromMessage(chatId: chatId, text: text, time: time, isFromMe: isFromMe, isRead: isRead, senderName: "", otherUserId: "", type: .direct)
+    }
+
+    /// Puts a chat back after it was deleted, matching Android's message_new insert.
+    public func upsertChatFromMessage(chatId: String, text: String, time: Int64, isFromMe: Bool, isRead: Bool, senderName: String, otherUserId: String, type: ConversationType) {
+        guard !chatId.isEmpty else { return }
         if var existing = chats[chatId] {
             existing.lastMessage = text
             existing.timestamp = max(existing.timestamp, time)
             existing.lastMessageIsFromMe = isFromMe
             existing.lastMessageRead = isRead
-            chats[chatId] = existing
-            persist()
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: .didUpdateChats, object: nil)
+            if existing.senderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !senderName.isEmpty {
+                existing.senderName = senderName
             }
+            if (existing.otherUserId ?? "").isEmpty, !otherUserId.isEmpty {
+                existing.otherUserId = otherUserId
+            }
+            chats[chatId] = existing
+        } else {
+            chats[chatId] = ChatEntity(
+                id: chatId,
+                type: type,
+                senderName: senderName.isEmpty ? "Chat" : senderName,
+                lastMessage: text,
+                timestamp: time,
+                unreadCount: isFromMe ? 0 : 1,
+                otherUserId: otherUserId.isEmpty ? nil : otherUserId,
+                isGroup: type == .group,
+                lastMessageIsFromMe: isFromMe,
+                lastMessageRead: isRead
+            )
+        }
+        persist()
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .didUpdateChats, object: nil)
         }
     }
 

@@ -141,6 +141,118 @@ public final class ContactSyncManager {
 
     // MARK: - Background Sync
 
+    /// Reads the phone book, saves those numbers to the account, then reads the
+    /// saved list back. A new phone with an empty address book still gets them.
+    public func syncAccountContacts() async -> [Contact] {
+        let allowed = await requestContactsAccess()
+        let device = allowed ? fetchAllContacts() : []
+        if !device.isEmpty {
+            let payload = device.map { ["name": $0.displayName, "phone_number": $0.phoneNumber] }
+            _ = try? await API.data("users/persistent-contacts", method: "POST", json: ["contacts": payload])
+        }
+
+        var saved: [ContactInfo] = []
+        if let data = try? await API.data("users/persistent-contacts") {
+            saved = Self.savedContacts(from: data)
+        }
+
+        var byKey: [String: ContactInfo] = [:]
+        for item in saved + device {
+            let key = Self.phoneKey(item.phoneNumber)
+            guard !key.isEmpty else { continue }
+            let current = byKey[key]
+            if current == nil || current?.displayName.isEmpty == true {
+                byKey[key] = item
+            }
+        }
+
+        var registeredByKey: [String: Contact] = [:]
+        let numbers = byKey.values.map(\.phoneNumber)
+        if !numbers.isEmpty, let data = try? await API.data("users/sync-contacts", method: "POST", json: ["phone_numbers": numbers]) {
+            let rows = (LiveJSON.object(data)["contacts"] as? [[String: Any]]) ?? []
+            for row in rows {
+                let id = LiveJSON.string(row["id"])
+                guard !id.isEmpty else { continue }
+                let phone = LiveJSON.string(row["phone_number"])
+                let key = Self.phoneKey(phone)
+                let localName = byKey[key]?.displayName ?? ""
+                let serverName = LiveJSON.string(row["display_name"])
+                let username = LiveJSON.string(row["username"])
+                let name = !localName.isEmpty ? localName : (!serverName.isEmpty ? serverName : (!username.isEmpty ? username : phone))
+                registeredByKey[key] = Contact(
+                    id: id,
+                    username: username,
+                    displayName: name,
+                    avatarUrl: LiveJSON.string(row["avatar_url"]).nilIfEmpty,
+                    phoneNumber: phone.isEmpty ? (byKey[key]?.phoneNumber ?? "") : phone,
+                    isRegistered: true,
+                    isVerified: LiveJSON.bool(row["is_verified"])
+                )
+            }
+        }
+
+        var result: [Contact] = []
+        var seen = Set<String>()
+        for (key, item) in byKey {
+            seen.insert(key)
+            if var registered = registeredByKey[key] {
+                if registered.displayName.isEmpty { registered.displayName = item.displayName }
+                if registered.phoneNumber.isEmpty { registered.phoneNumber = item.phoneNumber }
+                result.append(registered)
+            } else {
+                let name = item.displayName.isEmpty ? item.phoneNumber : item.displayName
+                result.append(Contact(
+                    id: "phone:\(item.phoneNumber)",
+                    username: item.phoneNumber,
+                    displayName: name,
+                    phoneNumber: item.phoneNumber,
+                    isRegistered: false,
+                    isAuthenticated: false
+                ))
+            }
+        }
+        for (key, registered) in registeredByKey where !seen.contains(key) {
+            result.append(registered)
+        }
+        result.sort { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+
+        await LocalDatabase.shared.upsertContacts(result.map {
+            ContactEntity(
+                id: $0.id,
+                username: $0.username,
+                displayName: $0.displayName,
+                avatarUrl: $0.avatarUrl,
+                phoneNumber: $0.phoneNumber,
+                isRegistered: $0.isRegistered
+            )
+        })
+        return result
+    }
+
+    static func savedContacts(from data: Data) -> [ContactInfo] {
+        let json = try? JSONSerialization.jsonObject(with: data)
+        let rows: [[String: Any]]
+        if let list = json as? [[String: Any]] {
+            rows = list
+        } else if let object = json as? [String: Any] {
+            rows = (object["contacts"] as? [[String: Any]]) ?? []
+        } else {
+            rows = []
+        }
+        return rows.compactMap { row in
+            let phone = LiveJSON.string(row["phone_number"])
+            guard !phone.isEmpty else { return nil }
+            let name = LiveJSON.string(row["name"])
+            return ContactInfo(displayName: name, phoneNumber: phone)
+        }
+    }
+
+    static func phoneKey(_ phone: String) -> String {
+        let digits = phone.filter(\.isNumber)
+        guard digits.count >= 9 else { return digits }
+        return String(digits.suffix(9))
+    }
+
     public func syncContacts(repository: ChatRepositoryContactSyncProtocol) async {
         guard await requestContactsAccess() else { return }
 
