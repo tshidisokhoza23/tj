@@ -1,3 +1,5 @@
+import Foundation
+
 public struct SyncContactsRequest: Codable, Sendable {
     public let phoneNumbers: [String]
 

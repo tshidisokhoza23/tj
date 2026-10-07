@@ -9,6 +9,7 @@ public final class AuthViewModel: ObservableObject {
     @Published public var otpState: Resource<String>? = nil
     @Published public var fieldErrors: [String: String] = [:]
 
+    public var currentUser: User? { SessionStore.shared.user }
     public private(set) var lastRequestedPhone: String = ""
     private var pendingAuthResponse: AuthResponse? = nil
     private let api = AuthApi()

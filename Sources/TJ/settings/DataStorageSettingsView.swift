@@ -163,7 +163,8 @@ struct DataStorageSettingsView: View {
                     Button("Done") { dismiss() }
                 }
             }
-            .sheet(item: $editingRulesType) { type in
+            .sheet(isPresented: Binding(get: { editingRulesType != nil }, set: { if !$0 { editingRulesType = nil } })) {
+                let type = editingRulesType ?? ""
                 if type == "Mobile Data" {
                     AutoDownloadRulesSheet(title: "On Mobile Data", rules: $settings.mobileDownload)
                 } else if type == "Wi-Fi" {

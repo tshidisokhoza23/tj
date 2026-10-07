@@ -1,3 +1,4 @@
+#if false
 import SwiftUI
 
 struct ChatsListView: View {

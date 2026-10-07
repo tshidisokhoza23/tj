@@ -140,7 +140,8 @@ struct PrivacySecuritySettingsView: View {
                     Button("Done") { dismiss() }
                 }
             }
-            .sheet(item: $editingScopeTitle) { title in
+            .sheet(isPresented: Binding(get: { editingScopeTitle != nil }, set: { if !$0 { editingScopeTitle = nil } })) {
+                let title = editingScopeTitle ?? ""
                 if title == "Last Seen & Online" {
                     PrivacyScopePickerSheet(title: title, scope: $privacy.lastSeen)
                 } else if title == "Phone Number" {

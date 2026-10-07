@@ -28,7 +28,7 @@ struct SocialView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         // Stories Row
-                        StoriesRowView(stories: chatViewModel.stories)
+                        StoriesRowView()
 
                         Divider()
 

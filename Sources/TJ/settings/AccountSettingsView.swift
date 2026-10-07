@@ -14,7 +14,7 @@ struct AccountSettingsView: View {
                     HStack {
                         Text("Phone Number")
                         Spacer()
-                        Text(authViewModel.currentUser.phoneNumber)
+                        Text(authViewModel.currentUser?.phoneNumber ?? "")
                             .foregroundColor(AppColors.greyMedium)
                     }
 
