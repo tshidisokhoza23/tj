@@ -10,6 +10,7 @@ public final class AuthViewModel: ObservableObject {
     @Published public var fieldErrors: [String: String] = [:]
 
     public var currentUser: User? { SessionStore.shared.user }
+    @Published public var selectedCountryCode: String = "+27"
     public private(set) var lastRequestedPhone: String = ""
     private var pendingAuthResponse: AuthResponse? = nil
     private let api = AuthApi()

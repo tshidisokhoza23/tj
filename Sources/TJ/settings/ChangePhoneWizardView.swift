@@ -86,7 +86,6 @@ struct ChangePhoneWizardView: View {
                         .padding(.horizontal)
 
                     Button("Confirm Number Change") {
-                        authViewModel.currentUser.phoneNumber = authViewModel.selectedCountryCode + newPhoneNumber
                         step = 4
                     }
                     .font(.headline)
@@ -122,8 +121,8 @@ struct ChangePhoneWizardView: View {
                 }
             }
             .sheet(isPresented: $showingCountryPicker) {
-                CountryPickerView { country in
-                    authViewModel.selectedCountryCode = country.code
+                CountryPickerView { _, code in
+                    authViewModel.selectedCountryCode = code
                 }
             }
         }

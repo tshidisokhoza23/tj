@@ -79,3 +79,4 @@ struct ChatsListView: View {
         }
     }
 }
+#endif

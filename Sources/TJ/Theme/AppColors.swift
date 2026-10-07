@@ -46,9 +46,6 @@ public struct AppColors {
     public static let backgroundLight = Color.appBackgroundLight
     public static let logoBlueDark = Color.logoBlueDark
     public static let boyishPurple = Color.boyishPurple
-}
-
-public enum AppColors {
     public static let brandPrimary = Color(red: 0.12, green: 0.48, blue: 0.98)
     public static let brandAccent = Color(red: 0.0, green: 0.8, blue: 0.6)
     public static let darkBackgroundTop = Color(red: 0.08, green: 0.09, blue: 0.12)

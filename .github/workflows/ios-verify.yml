@@ -59,3 +59,29 @@ jobs:
         with:
           name: TJ-iOS-App
           path: TJ.ipa
+
+      - name: Compile App (iPhone)
+        run: |
+          xcodebuild build \
+            -project TJ.xcodeproj \
+            -scheme TJ \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            BUILD_DIR="$PWD/build-device"
+
+      - name: Package device IPA
+        run: |
+          rm -rf Payload
+          mkdir -p Payload
+          cp -r "$PWD/build-device/Release-iphoneos/TJ.app" Payload/
+          zip -r TJ-device.ipa Payload
+
+      - name: Upload device IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: TJ-iOS-Device
+          path: TJ-device.ipa

@@ -1,5 +1,16 @@
 import SwiftUI
 
+struct StoriesRowView: View {
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            Text("Stories")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.horizontal)
+        }
+    }
+}
+
 struct SocialView: View {
     @EnvironmentObject var socialViewModel: SocialViewModel
     @EnvironmentObject var chatViewModel: ChatViewModel
