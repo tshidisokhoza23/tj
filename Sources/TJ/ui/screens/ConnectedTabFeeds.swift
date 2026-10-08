@@ -1102,6 +1102,7 @@ struct PostActionBar: View {
                     .frame(minWidth: 32, minHeight: 32)
             }
             .buttonStyle(.borderless)
+            CreatorTipButton(postId: post.id, authorId: post.authorId)
         }
         .padding(.top, 4)
     }
@@ -1732,6 +1733,7 @@ private struct ShortsChrome: View {
                         Text("\(post.likes)").font(.system(size: 12, weight: .bold)).foregroundColor(.white)
                     }
                 }
+                CreatorTipButton(postId: post.id, authorId: post.authorId, tint: .white)
                 Button(action: onComment) {
                     VStack(spacing: 4) {
                         Image(systemName: "message.fill").font(.system(size: 26)).foregroundColor(.white)
@@ -1868,6 +1870,7 @@ private struct ShortClipView: View {
                                 .foregroundColor(.white)
                         }
                     }
+                    CreatorTipButton(postId: post.id, authorId: post.authorId, tint: .white)
 
                     Button(action: onOpen) {
                         VStack(spacing: 4) {
