@@ -177,7 +177,6 @@ public struct WalletView: View {
             }
 
             walletActionButton(title: "Payout", icon: "banknote.fill", color: .orange) {
-                payoutAmountText = ""
                 showPayoutSheet = true
             }
         }
@@ -389,7 +388,7 @@ public struct WalletView: View {
     }
 
     private func recoverUnfinishedPurchases() async {
-        for await verification in Transaction.unfinished {
+        for await verification in StoreKit.Transaction.unfinished {
             guard case .verified(let transaction) = verification,
                   ["tj_coins_100", "tj_coins_500", "tj_coins_1000"].contains(transaction.productID) else { continue }
             try? await CreatorWalletAPI.credit(verification)
@@ -438,7 +437,7 @@ enum CreatorWalletAPI {
         return (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
     }
 
-    static func credit(_ verification: VerificationResult<Transaction>) async throws {
+    static func credit(_ verification: VerificationResult<StoreKit.Transaction>) async throws {
         guard case .verified(let transaction) = verification else {
             throw APIError.status(400, "The App Store purchase could not be verified")
         }
