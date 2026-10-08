@@ -315,7 +315,9 @@ enum MediaActions {
     }
     static func shareSheet(_ post: FeedPost) {
         let link = "https://firstapp.com/post/\(post.id)"
-        let text = post.content.isEmpty ? link : "\(post.content)\n\(link)"
+        let intro = post.playsAsVideo ? "Watch this short on TJ" : "See this on TJ"
+        let body = post.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = body.isEmpty ? "\(intro)\n\(link)" : "\(intro)\n\(body)\n\(link)"
         DispatchQueue.main.async {
             let controller = UIActivityViewController(activityItems: [text], applicationActivities: nil)
             guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -869,12 +871,7 @@ struct FeedPostCard: View {
             // Caption Text
             if !shown.content.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(shown.content)
-                        .font(.system(size: 15))
-                        .lineSpacing(3)
-                        .foregroundColor(.primary)
-                        .lineLimit(isExpanded ? nil : 5)
-                        .multilineTextAlignment(.leading)
+                    HashtagText(text: shown.content, lineLimit: isExpanded ? nil : 5)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if !isExpanded && shown.content.count > 200 {
                         Button("Show More") { isExpanded = true }
@@ -882,8 +879,6 @@ struct FeedPostCard: View {
                             .foregroundColor(.appPrimary)
                     }
                 }
-                .contentShape(Rectangle())
-                .onTapGesture(perform: onOpen)
             }
 
             // Media Grid or Video Player
@@ -1245,7 +1240,7 @@ struct CreatePostSheet: View {
                                 )
 
                             TextField(
-                                replyToPost != nil ? "Post your reply" : "What's happening?",
+                                replyToPost != nil ? "Post your reply" : "What's happening? Add #hashtags",
                                 text: $postText,
                                 axis: .vertical
                             )
@@ -1526,6 +1521,9 @@ struct ShortsFeedView: View {
     @State private var commentShort: FeedPost?
     @State private var dismissedShortAds: Set<Int> = []
     @State private var showShortsAd = false
+    @State private var shortPaused = false
+    @State private var shortMuted = false
+    @State private var shortProgress = 0.0
 
     var body: some View {
         Group {
@@ -1541,7 +1539,14 @@ struct ShortsFeedView: View {
                 .padding()
             } else {
                 GeometryReader { geo in
-                VerticalShortsPlayer(posts: shorts, page: $page)
+                VerticalShortsPlayer(
+                    posts: shorts,
+                    page: $page,
+                    paused: $shortPaused,
+                    muted: $shortMuted,
+                    progress: $shortProgress,
+                    onDoubleLike: { if shorts.indices.contains(page) { toggleShortLike(shorts[page].id) } }
+                )
                     .frame(width: geo.size.width, height: geo.size.height)
                     .overlay(alignment: .topLeading) {
                         Button { showCreateShort = true } label: {
@@ -1557,17 +1562,48 @@ struct ShortsFeedView: View {
                     }
                     .overlay(alignment: .topTrailing) {
                         if shorts.indices.contains(page) {
-                            Button { showShortSearch = true } label: {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 44, height: 44)
-                                    .background(Color.black.opacity(0.35))
-                                    .clipShape(Circle())
+                            HStack(spacing: 10) {
+                                Button { shortMuted.toggle() } label: {
+                                    Image(systemName: shortMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .frame(width: 44, height: 44)
+                                        .background(Color.black.opacity(0.35))
+                                        .clipShape(Circle())
+                                }
+                                Button { showShortSearch = true } label: {
+                                    Image(systemName: "magnifyingglass")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .frame(width: 44, height: 44)
+                                        .background(Color.black.opacity(0.35))
+                                        .clipShape(Circle())
+                                }
                             }
                             .padding(.top, 48)
                             .padding(.trailing, 16)
                         }
+                    }
+                    .overlay {
+                        if shortPaused {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 54))
+                                .foregroundColor(.white)
+                                .padding(22)
+                                .background(Color.black.opacity(0.35))
+                                .clipShape(Circle())
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .overlay(alignment: .bottom) {
+                        GeometryReader { bar in
+                            Rectangle()
+                                .fill(Color.white.opacity(0.9))
+                                .frame(width: max(bar.size.width * shortProgress, 0), height: 3)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        }
+                        .frame(height: 3)
+                        .allowsHitTesting(false)
                     }
                     .overlay(alignment: .bottom) {
                         if shorts.indices.contains(page) {
@@ -1581,7 +1617,8 @@ struct ShortsFeedView: View {
                                 onComment: { commentShort = shorts[page] },
                                 onLike: { toggleShortLike(shorts[page].id) },
                                 onSave: { toggleShortSave(shorts[page].id) },
-                                onShare: { shareShort(shorts[page].id) }
+                                onShare: { shareShort(shorts[page].id) },
+                                onFollow: { toggleShortFollow(shorts[page].id) }
                             )
                         }
                     }
@@ -1590,6 +1627,8 @@ struct ShortsFeedView: View {
             }
         }
         .onChange(of: page) { newPage in
+            shortPaused = false
+            shortProgress = 0
             guard shorts.indices.contains(newPage), (newPage + 1) % 8 == 0, !dismissedShortAds.contains(newPage) else { return }
             #if canImport(GoogleMobileAds)
             if NativeAdPool.shared.claim(slot: "short-\(newPage)") != nil {
@@ -1688,6 +1727,22 @@ struct ShortsFeedView: View {
         Task { await MediaActions.bookmark(id) }
     }
 
+    private func toggleShortFollow(_ id: String) {
+        guard let index = shorts.firstIndex(where: { $0.id == id }) else { return }
+        let authorId = shorts[index].authorId
+        guard !authorId.isEmpty else { return }
+        let next = !shorts[index].isAuthorFollowed
+        shorts[index].isAuthorFollowed = next
+        Task {
+            let path = next ? "users/\(authorId)/follow" : "users/\(authorId)/unfollow"
+            if (try? await API.data(path, method: "POST")) == nil {
+                if let current = shorts.firstIndex(where: { $0.id == id }) {
+                    shorts[current].isAuthorFollowed = !next
+                }
+            }
+        }
+    }
+
     private func shareShort(_ id: String) {
         guard let index = shorts.firstIndex(where: { $0.id == id }) else { return }
         shorts[index].shares += 1
@@ -1704,23 +1759,36 @@ private struct ShortsChrome: View {
     var onLike: () -> Void
     var onSave: () -> Void
     var onShare: () -> Void
+    var onFollow: () -> Void = {}
     @State private var showMore = false
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
-                Button(action: onProfile) {
-                    Text(post.title)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
+                HStack(spacing: 8) {
+                    Button(action: onProfile) {
+                        Text(post.title)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                    }
+                    if !post.isAuthorFollowed && post.authorId != (UserDefaults.standard.string(forKey: "tj_user_id") ?? "") {
+                        Button("Follow", action: onFollow)
+                            .font(.system(size: 13, weight: .bold))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color.white)
+                            .foregroundColor(.black)
+                            .clipShape(Capsule())
+                    }
                 }
                 if !post.content.isEmpty {
-                    Text(post.content)
-                        .font(.system(size: 14))
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                        .onTapGesture(perform: onOpen)
+                    HashtagText(
+                        text: post.content,
+                        color: .white,
+                        font: .system(size: 14),
+                        lineLimit: 3
+                    )
                 }
             }
             Spacer(minLength: 0)
@@ -1971,20 +2039,43 @@ private final class ShortPlayerView: UIView {
 private struct VerticalShortsPlayer: UIViewControllerRepresentable {
     let posts: [FeedPost]
     @Binding var page: Int
+    @Binding var paused: Bool
+    @Binding var muted: Bool
+    @Binding var progress: Double
+    var onDoubleLike: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    final class Coordinator {
+        var paused = false
+        var muted = false
+    }
 
     func makeUIViewController(context: Context) -> ShortsPagingController {
         let controller = ShortsPagingController()
-        controller.onPage = { newPage in
-            if page != newPage { page = newPage }
-        }
+        bind(controller, context: context)
         return controller
     }
 
     func updateUIViewController(_ controller: ShortsPagingController, context: Context) {
+        bind(controller, context: context)
+        controller.setPosts(posts, page: page)
+        if context.coordinator.paused != paused || context.coordinator.muted != muted {
+            context.coordinator.paused = paused
+            context.coordinator.muted = muted
+            controller.apply(paused: paused, muted: muted)
+        }
+    }
+
+    private func bind(_ controller: ShortsPagingController, context: Context) {
         controller.onPage = { newPage in
             if page != newPage { page = newPage }
         }
-        controller.setPosts(posts, page: page)
+        controller.onProgress = { value in
+            if abs(progress - value) > 0.01 { progress = value }
+        }
+        controller.onTogglePause = { paused.toggle() }
+        controller.onDoubleLike = onDoubleLike
     }
 }
 
@@ -2079,6 +2170,9 @@ private struct SocialNotesSheet: View {
 
 private final class ShortsPagingController: UIViewController, UIScrollViewDelegate {
     var onPage: ((Int) -> Void)?
+    var onProgress: ((Double) -> Void)?
+    var onTogglePause: (() -> Void)?
+    var onDoubleLike: (() -> Void)?
     private let scrollView = UIScrollView()
     private var posts: [FeedPost] = []
     private var players: [AVPlayer] = []
@@ -2086,6 +2180,11 @@ private final class ShortsPagingController: UIViewController, UIScrollViewDelega
     private var hosts: [UIView] = []
     private var appliedPage = -1
     private var loopObservers: [NSObjectProtocol] = []
+    private var userPaused = false
+    private var muted = false
+    private var progressToken: Any?
+    private var progressPlayer: AVPlayer?
+    private let heart = UIImageView(image: UIImage(systemName: "heart.fill"))
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -2096,6 +2195,46 @@ private final class ShortsPagingController: UIViewController, UIScrollViewDelega
         scrollView.bounces = true
         scrollView.contentInsetAdjustmentBehavior = .never
         view.addSubview(scrollView)
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(doubleTapped))
+        doubleTap.numberOfTapsRequired = 2
+        let singleTap = UITapGestureRecognizer(target: self, action: #selector(singleTapped))
+        singleTap.require(toFail: doubleTap)
+        scrollView.addGestureRecognizer(doubleTap)
+        scrollView.addGestureRecognizer(singleTap)
+        heart.tintColor = .white
+        heart.contentMode = .scaleAspectFit
+        heart.alpha = 0
+        heart.isUserInteractionEnabled = false
+        view.addSubview(heart)
+    }
+
+    @objc private func singleTapped() {
+        onTogglePause?()
+    }
+
+    @objc private func doubleTapped() {
+        onDoubleLike?()
+        heart.frame = CGRect(x: (view.bounds.width - 96) / 2, y: (view.bounds.height - 96) / 2, width: 96, height: 96)
+        heart.transform = CGAffineTransform(scaleX: 0.6, y: 0.6)
+        heart.alpha = 1
+        UIView.animate(withDuration: 0.45, delay: 0.15, options: .curveEaseOut) {
+            self.heart.alpha = 0
+            self.heart.transform = CGAffineTransform(scaleX: 1.35, y: 1.35)
+        }
+    }
+
+    func apply(paused: Bool, muted: Bool) {
+        userPaused = paused
+        self.muted = muted
+        for player in players {
+            player.isMuted = muted
+        }
+        guard players.indices.contains(appliedPage) else { return }
+        if paused {
+            players[appliedPage].pause()
+        } else if players[appliedPage].currentItem != nil {
+            players[appliedPage].play()
+        }
     }
 
     override func viewDidLayoutSubviews() {
@@ -2121,6 +2260,11 @@ private final class ShortsPagingController: UIViewController, UIScrollViewDelega
     }
 
     private func rebuild() {
+        if let progressToken, let progressPlayer {
+            progressPlayer.removeTimeObserver(progressToken)
+        }
+        progressToken = nil
+        progressPlayer = nil
         loopObservers.forEach { NotificationCenter.default.removeObserver($0) }
         loopObservers.removeAll()
         children.forEach { child in
@@ -2138,7 +2282,7 @@ private final class ShortsPagingController: UIViewController, UIScrollViewDelega
             host.backgroundColor = .black
             host.isUserInteractionEnabled = false
             let player = AVPlayer()
-            player.isMuted = false
+            player.isMuted = muted
             let layer = AVPlayerLayer(player: player)
             layer.videoGravity = .resizeAspectFill
             host.layer.addSublayer(layer)
@@ -2147,6 +2291,7 @@ private final class ShortsPagingController: UIViewController, UIScrollViewDelega
             label.textColor = .white
             label.font = .boldSystemFont(ofSize: 16)
             label.tag = 8
+            label.isHidden = true
             host.addSubview(label)
             if post.playbackURL == nil {
                 let missing = UILabel()
@@ -2192,8 +2337,23 @@ private final class ShortsPagingController: UIViewController, UIScrollViewDelega
         let index = Int(round(scrollView.contentOffset.y / height))
         let clamped = min(max(index, 0), max(posts.count - 1, 0))
         appliedPage = clamped
+        userPaused = false
         onPage?(clamped)
         play(clamped)
+    }
+
+    private func watchProgress(_ player: AVPlayer) {
+        if let progressToken, let progressPlayer {
+            progressPlayer.removeTimeObserver(progressToken)
+        }
+        let token = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.2, preferredTimescale: 600), queue: .main) { [weak self, weak player] time in
+            guard let self, let item = player?.currentItem else { return }
+            let duration = item.duration.seconds
+            guard duration.isFinite, duration > 0 else { return }
+            self.onProgress?(min(max(time.seconds / duration, 0), 1))
+        }
+        progressToken = token
+        progressPlayer = player
     }
 
     private func play(_ index: Int) {
@@ -2216,9 +2376,13 @@ private final class ShortsPagingController: UIViewController, UIScrollViewDelega
                 guard players.indices.contains(index) else { return }
                 let item = AVPlayerItem(url: playable)
                 player.replaceCurrentItem(with: item)
-                let end = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { _ in
+                let end = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
                     player.seek(to: .zero)
-                    player.play()
+                    if self?.userPaused == true {
+                        player.pause()
+                    } else {
+                        player.play()
+                    }
                 }
                 let failed = NotificationCenter.default.addObserver(forName: .AVPlayerItemFailedToPlayToEndTime, object: item, queue: .main) { note in
                     let message = (note.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error)?.localizedDescription ?? "Video could not play"
@@ -2226,7 +2390,13 @@ private final class ShortsPagingController: UIViewController, UIScrollViewDelega
                 }
                 loopObservers.append(end)
                 loopObservers.append(failed)
-                player.play()
+                player.isMuted = self.muted
+                if self.userPaused {
+                    player.pause()
+                } else {
+                    player.play()
+                }
+                self.watchProgress(player)
                 if layers.indices.contains(index) {
                     layers[index].player = player
                 }
@@ -2246,5 +2416,87 @@ private final class ShortsPagingController: UIViewController, UIScrollViewDelega
         label.numberOfLines = 3
         label.frame = host.bounds
         if label.superview == nil { host.addSubview(label) }
+    }
+}
+
+private struct HashtagText: View {
+    let text: String
+    var color: Color = .primary
+    var font: Font = .system(size: 15)
+    var lineLimit: Int? = nil
+    @State private var selectedTag: String?
+
+    var body: some View {
+        Text(Self.linked(text, color: color))
+            .font(font)
+            .lineSpacing(3)
+            .foregroundColor(color)
+            .lineLimit(lineLimit)
+            .multilineTextAlignment(.leading)
+            .environment(\.openURL, OpenURLAction { url in
+                guard url.scheme == "tjtag" else { return .systemAction }
+                let raw = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                let tag = raw.removingPercentEncoding ?? raw
+                guard !tag.isEmpty else { return .discarded }
+                selectedTag = tag
+                return .handled
+            })
+            .sheet(isPresented: Binding(get: { selectedTag != nil }, set: { if !$0 { selectedTag = nil } })) {
+                if let selectedTag {
+                    HashtagResultsSheet(tag: selectedTag)
+                }
+            }
+    }
+
+    private static func linked(_ text: String, color: Color) -> AttributedString {
+        var attributed = AttributedString(text)
+        guard let regex = try? NSRegularExpression(pattern: "#[A-Za-z0-9_]{2,40}") else { return attributed }
+        let ns = text as NSString
+        for match in regex.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+            guard let range = Range(match.range, in: text),
+                  let start = AttributedString.Index(range.lowerBound, within: attributed),
+                  let end = AttributedString.Index(range.upperBound, within: attributed) else { continue }
+            let tag = String(text[range]).dropFirst()
+            let encoded = tag.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? String(tag)
+            if let url = URL(string: "tjtag://hashtag/\(encoded)") {
+                attributed[start..<end].link = url
+            }
+            attributed[start..<end].foregroundColor = color == .white ? UIColor.white : UIColor(red: 0.11, green: 0.63, blue: 0.95, alpha: 1)
+            attributed[start..<end].underlineStyle = .single
+        }
+        return attributed
+    }
+}
+
+private struct HashtagResultsSheet: View {
+    let tag: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var posts: [FeedPost] = []
+    @State private var note = "Searching posts and shorts..."
+
+    var body: some View {
+        NavigationStack {
+            List(posts) { post in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(post.authorName.isEmpty ? "Post" : post.authorName).font(.headline)
+                    Text(post.content).font(.subheadline).foregroundColor(.secondary).lineLimit(3)
+                }
+            }
+            .overlay { if posts.isEmpty { Text(note).foregroundColor(.secondary).padding() } }
+            .navigationTitle("#\(tag)")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
+            .task { await load() }
+        }
+    }
+
+    private func load() async {
+        do {
+            let data = try await API.data("posts", query: ["hashtag": tag, "page": "1"])
+            let parsed = LiveJSON.posts(from: data)
+            posts = parsed.isEmpty ? FeedPost.decodeList(data) : parsed
+            note = posts.isEmpty ? "No posts use #\(tag) yet." : ""
+        } catch {
+            note = "Could not search #\(tag)"
+        }
     }
 }

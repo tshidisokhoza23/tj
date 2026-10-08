@@ -151,9 +151,7 @@ public struct MessageBubbleView: View {
                                 .foregroundColor(message.isFromMe ? .white : .primary)
                         }
                     } else if !message.content.isEmpty {
-                        Text(visibleBody)
-                            .font(.system(size: fontSize))
-                            .foregroundColor(message.isFromMe ? .white : .primary)
+                        ChatRichText(text: visibleBody, color: message.isFromMe ? .white : .primary, size: fontSize)
                     }
 
                     HStack(spacing: 4) {
@@ -232,5 +230,42 @@ private struct StoryReplyCard: View {
         .padding(6)
         .background(isFromMe ? Color.white.opacity(0.15) : Color.black.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+struct ChatRichText: View {
+    let text: String
+    let color: Color
+    let size: CGFloat
+
+    var body: some View {
+        Text(Self.linked(text, color: color))
+            .font(.system(size: size))
+            .tint(color == .white ? .white : Color(red: 0.13, green: 0.59, blue: 0.95))
+    }
+
+    static func linked(_ text: String, color: Color) -> AttributedString {
+        var attributed = AttributedString(text)
+        let types = NSTextCheckingResult.CheckingType.link.rawValue | NSTextCheckingResult.CheckingType.phoneNumber.rawValue
+        guard let detector = try? NSDataDetector(types: types) else { return attributed }
+        detector.enumerateMatches(in: text, range: NSRange(location: 0, length: (text as NSString).length)) { match, _, _ in
+            guard let match, let stringRange = Range(match.range, in: text),
+                  let start = AttributedString.Index(stringRange.lowerBound, within: attributed),
+                  let end = AttributedString.Index(stringRange.upperBound, within: attributed) else { return }
+            let url: URL?
+            if match.resultType == .phoneNumber, let number = match.phoneNumber {
+                let digits = number.filter { $0.isNumber || $0 == "+" }
+                url = URL(string: "tel:\(digits)")
+            } else {
+                url = match.url
+            }
+            guard let url else { return }
+            attributed[start..<end].link = url
+            attributed[start..<end].underlineStyle = .single
+            if color == .white {
+                attributed[start..<end].foregroundColor = .white
+            }
+        }
+        return attributed
     }
 }
