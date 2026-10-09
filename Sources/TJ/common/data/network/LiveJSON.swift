@@ -245,7 +245,10 @@ enum LiveJSON {
             originalMediaType: nested ? "" : string((json["original_post"] as? [String: Any])?["media_type"]),
             originalPostType: nested ? "" : string((json["original_post"] as? [String: Any])?["post_type"]),
             latestReplyAuthor: string(json["latest_reply_author"]),
-            latestReplyText: string(json["latest_reply_text"])
+            latestReplyText: string(json["latest_reply_text"]),
+            mood: string(json["mood"]),
+            aiAssisted: bool(json["ai_assisted"]),
+            collaboratorCount: strings(json["collaborators"]).count
         )
     }
 

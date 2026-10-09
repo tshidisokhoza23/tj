@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 import AVKit
 import PhotosUI
 import UniformTypeIdentifiers
@@ -37,6 +38,9 @@ public struct FeedPost: Identifiable, Codable, Sendable {
     var originalPostType: String
     var latestReplyAuthor: String
     var latestReplyText: String
+    var mood: String
+    var aiAssisted: Bool
+    var collaboratorCount: Int
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -91,7 +95,10 @@ public struct FeedPost: Identifiable, Codable, Sendable {
         originalMediaType: String = "",
         originalPostType: String = "",
         latestReplyAuthor: String = "",
-        latestReplyText: String = ""
+        latestReplyText: String = "",
+        mood: String = "",
+        aiAssisted: Bool = false,
+        collaboratorCount: Int = 0
     ) {
         self.id = id
         self.authorId = authorId
@@ -125,6 +132,9 @@ public struct FeedPost: Identifiable, Codable, Sendable {
         self.originalPostType = originalPostType
         self.latestReplyAuthor = latestReplyAuthor
         self.latestReplyText = latestReplyText
+        self.mood = mood
+        self.aiAssisted = aiAssisted
+        self.collaboratorCount = collaboratorCount
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -183,6 +193,9 @@ public struct FeedPost: Identifiable, Codable, Sendable {
         originalPostType = ""
         latestReplyAuthor = ""
         latestReplyText = ""
+        mood = ""
+        aiAssisted = false
+        collaboratorCount = 0
     }
 
     private static func flexInt(_ c: KeyedDecodingContainer<CodingKeys>, _ key: CodingKeys) -> Int {
@@ -333,12 +346,20 @@ enum MediaActions {
     static func likeReply(_ id: String) async { _ = try? await API.data("post-replies/\(id)/like", method: "POST") }
     static func repostReply(_ id: String) async { _ = try? await API.data("post-replies/\(id)/repost", method: "POST") }
     static func bookmarkReply(_ id: String) async { _ = try? await API.data("post-replies/\(id)/bookmark", method: "POST") }
-    static func create(content: String, type: String = "standard", mediaURLs: [String] = []) async throws {
-        _ = try await API.data("posts", method: "POST", json: [
+    static func create(content: String, type: String = "standard", mediaURLs: [String] = [], location: String = "", compose: [String: Any] = [:]) async throws -> String {
+        let data = try await API.data("posts", method: "POST", json: [
             "content": content,
             "post_type": type,
-            "media_urls": mediaURLs
+            "media_urls": mediaURLs,
+            "location": location
         ])
+        let json = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+        let nested = json["post"] as? [String: Any]
+        let id = (json["id"] as? String) ?? (nested?["id"] as? String) ?? ""
+        if !id.isEmpty, !compose.isEmpty {
+            _ = try? await API.data("compose/posts/\(id)", method: "PUT", json: compose)
+        }
+        return id
     }
     static func userPosts(userId: String, type: String) async -> [FeedPost] {
         guard !userId.isEmpty, userId != "me", userId != "currentUser" else { return [] }
@@ -411,6 +432,7 @@ struct SocialFeedView: View {
     @State private var showCircles = false
     @State private var showCreatorDashboard = false
     @State private var qualityMode = "balanced"
+    @State private var postContext = ""
 
     private let categories = [
         ("all", "All"), ("tech", "Technology"), ("music", "Music"), ("gaming", "Gaming"),
@@ -568,10 +590,10 @@ struct SocialFeedView: View {
             CreatorDashboardView()
         }
         .sheet(isPresented: $showCreatePost) {
-            CreatePostSheet { text, media in
+            CreatePostSheet { text, media, location, compose in
                 showCreatePost = false
                 Task {
-                    try? await MediaActions.create(content: text, mediaURLs: media)
+                    _ = try? await MediaActions.create(content: text, mediaURLs: media, location: location, compose: compose)
                     await load(reset: true)
                 }
             }
@@ -597,8 +619,18 @@ struct SocialFeedView: View {
         .sheet(isPresented: $showSocialSettings) {
             SettingsView(router: NavigationRouter())
         }
+        .alert("Post context", isPresented: Binding(get: { !postContext.isEmpty }, set: { if !$0 { postContext = "" } })) {
+            Button("OK", role: .cancel) { postContext = "" }
+        } message: {
+            Text(postContext)
+        }
         .confirmationDialog("Post", isPresented: Binding(get: { moreTarget != nil }, set: { if !$0 { moreTarget = nil } }), titleVisibility: .visible) {
             Button("Share") { if let id = moreTarget?.id { share(id) } }
+            Button("Notes, edits, and reputation") {
+                if let post = moreTarget {
+                    Task { await showPostContext(post) }
+                }
+            }
             Button("Copy link") { if let post = moreTarget { MediaActions.copyLink(post) } }
             Button("Save") { if let id = moreTarget?.id { toggleSave(id) } }
             Button("Report", role: .destructive) { if let id = moreTarget?.id { Task { await MediaActions.report(id, reason: "report") } } }
@@ -656,6 +688,27 @@ struct SocialFeedView: View {
         posts[index].isReposted.toggle()
         posts[index].repostCount += posts[index].isReposted ? 1 : -1
         Task { await MediaActions.repost(id) }
+    }
+
+    private func showPostContext(_ post: FeedPost) async {
+        async let notesData = try? API.data("posts/\(post.id)/notes")
+        async let editsData = try? API.data("posts/\(post.id)/edits")
+        let author = post.authorId.isEmpty ? "me" : post.authorId
+        async let scoreData = try? API.data("reputation/\(author)")
+        let notesJSON = (try? JSONSerialization.jsonObject(with: await notesData ?? Data())) as? [String: Any]
+        let editsJSON = (try? JSONSerialization.jsonObject(with: await editsData ?? Data())) as? [String: Any]
+        let scoreJSON = (try? JSONSerialization.jsonObject(with: await scoreData ?? Data())) as? [String: Any]
+        let notes = (notesJSON?["notes"] as? [[String: Any]])?.compactMap { row -> String? in
+            let body = row["body"] as? String ?? ""
+            guard !body.isEmpty else { return nil }
+            return "@\(row["author"] as? String ?? "user"): \(body)"
+        } ?? []
+        let edits = (editsJSON?["edits"] as? [[String: Any]])?.compactMap { $0["previous_text"] as? String } ?? []
+        let score = scoreJSON?["score"] as? Int ?? 0
+        let explanation = scoreJSON?["note"] as? String ?? "Reputation uses real posts, replies, and followers."
+        await MainActor.run {
+            postContext = "\(explanation)\nScore \(score).\n\nCommunity notes\n\(notes.isEmpty ? "None yet." : notes.joined(separator: "\n"))\n\nEdit history\n\(edits.isEmpty ? "No edits." : edits.joined(separator: "\n"))"
+        }
     }
 
     private func share(_ id: String) {
@@ -734,8 +787,8 @@ struct SocialFeedView: View {
         var rows: [SocialFeedEntry] = []
         for (index, post) in posts.filter({ passesQuality($0) }).enumerated() where !post.id.isEmpty {
             rows.append(SocialFeedEntry(kind: .post(post)))
-            if (index + 1) % 5 == 0 {
-                rows.append(SocialFeedEntry(kind: .ad("ad-feed-\(post.id)")))
+            if AdConfig.nativeUnit != nil, (index + 1) % 5 == 0 {
+                rows.append(SocialFeedEntry(kind: .ad("feed-ad-\((index + 1) / 5)")))
             }
         }
         return rows
@@ -813,25 +866,37 @@ private struct SocialFeedEntry: Identifiable {
 
 private struct StableFeedAd: View {
     let slot: String
+    @State private var loaded = false
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(UIColor.secondarySystemBackground))
-            VStack(spacing: 4) {
-                Text("Sponsored")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                NativeAdRow(slot: slot)
-            }
-            .padding(10)
+            Color.clear
+            NativeAdRow(slot: slot)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .onAppear { refresh() }
+                .task(id: slot) {
+                    for _ in 0..<20 {
+                        #if canImport(GoogleMobileAds)
+                        if NativeAdPool.shared.claim(slot: slot) != nil {
+                            loaded = true
+                            return
+                        }
+                        #endif
+                        try? await Task.sleep(nanoseconds: 400_000_000)
+                    }
+                }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 132)
+        .frame(height: 280)
         .clipped()
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    private func refresh() {
+        #if canImport(GoogleMobileAds)
+        loaded = NativeAdPool.shared.claim(slot: slot) != nil
+        #endif
     }
 }
 
@@ -930,6 +995,21 @@ struct FeedPostCard: View {
                         .frame(width: 32, height: 32)
                 }
                 .buttonStyle(.borderless)
+            }
+
+            if !shown.mood.isEmpty || shown.aiAssisted || shown.collaboratorCount > 0 {
+                HStack(spacing: 8) {
+                    if !shown.mood.isEmpty {
+                        Text(shown.mood).font(.system(size: 12, weight: .semibold)).foregroundColor(.appPrimary)
+                    }
+                    if shown.aiAssisted {
+                        Text("Improved with AI").font(.system(size: 12)).foregroundColor(.secondary)
+                    }
+                    if shown.collaboratorCount > 0 {
+                        Text("\(shown.collaboratorCount) collaborator\(shown.collaboratorCount == 1 ? "" : "s")")
+                            .font(.system(size: 12)).foregroundColor(.secondary)
+                    }
+                }
             }
 
             // Caption Text
@@ -1258,7 +1338,7 @@ private struct SocialMenuSheet: View {
 struct CreatePostSheet: View {
     var replyToPost: FeedPost? = nil
     var quotingPost: FeedPost? = nil
-    var onPost: (String, [String]) -> Void
+    var onPost: (String, [String], String, [String: Any]) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var postText = ""
@@ -1266,11 +1346,29 @@ struct CreatePostSheet: View {
     @State private var loadedData: [Data] = []
     @State private var uploadedURLs: [String] = []
     @State private var selectedLocation: String? = nil
+    @State private var locationDraft = ""
+    @State private var showLocation = false
     @State private var showPoll = false
     @State private var pollOptions: [String] = ["", ""]
     @State private var isPosting = false
     @State private var note = ""
     @State private var showAiAssist = false
+    @State private var audience = "public"
+    @State private var circleId = ""
+    @State private var circles: [(id: String, name: String)] = []
+    @State private var showAudience = false
+    @State private var mood = ""
+    @State private var showMood = false
+    @State private var scheduledAt: Int64?
+    @State private var aiAssisted = false
+    @State private var collaborators: [(id: String, name: String)] = []
+    @State private var peopleQuery = ""
+    @State private var people: [(id: String, name: String)] = []
+    @State private var showCollaborators = false
+    @State private var draftLabel = ""
+    @State private var recording = false
+    @State private var recorder: AVAudioRecorder?
+    @State private var voiceURL: URL?
 
     private let charLimit = 280
 
@@ -1300,13 +1398,17 @@ struct CreatePostSheet: View {
 
                         // User Avatar & Text Editor
                         HStack(alignment: .top, spacing: 12) {
-                            Circle()
-                                .fill(Color.appPrimary)
-                                .frame(width: 42, height: 42)
-                                .overlay(
-                                    Image(systemName: "person.fill")
-                                        .foregroundColor(.white)
-                                )
+                            ZStack {
+                                Circle()
+                                    .trim(from: 0, to: min(CGFloat(postText.count) / CGFloat(charLimit), 1))
+                                    .stroke(Color(red: 0.114, green: 0.608, blue: 0.941), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                                    .rotationEffect(.degrees(-90))
+                                    .frame(width: 46, height: 46)
+                                Circle()
+                                    .fill(Color.appPrimary)
+                                    .frame(width: 42, height: 42)
+                                    .overlay(Image(systemName: "person.fill").foregroundColor(.white))
+                            }
 
                             TextField(
                                 replyToPost != nil ? "Post your reply" : "What's happening? Add #hashtags",
@@ -1423,6 +1525,19 @@ struct CreatePostSheet: View {
                             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.3), lineWidth: 1))
                         }
 
+                        if !draftLabel.isEmpty {
+                            Text(draftLabel).font(.system(size: 12)).foregroundColor(.secondary)
+                        }
+                        if !mood.isEmpty {
+                            Text(mood).font(.system(size: 13, weight: .semibold)).foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                        }
+                        if !collaborators.isEmpty {
+                            Text("With " + collaborators.map(\.name).joined(separator: ", "))
+                                .font(.system(size: 12)).foregroundColor(.secondary)
+                        }
+                        if scheduledAt != nil {
+                            Text("Scheduled for one hour from now").font(.system(size: 12)).foregroundColor(.secondary)
+                        }
                         if !note.isEmpty {
                             Text(note)
                                 .font(.system(size: 12))
@@ -1436,14 +1551,15 @@ struct CreatePostSheet: View {
 
                 // Reply Scope & Media Action Bar
                 VStack(spacing: 8) {
-                    HStack {
-                        Image(systemName: "globe")
-                            .font(.system(size: 13))
-                            .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                        Text("Everyone can reply")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                        Spacer()
+                    Button { showAudience = true } label: {
+                        HStack {
+                            Image(systemName: "globe")
+                                .font(.system(size: 13))
+                            Text(audience == "followers" ? "Followers only" : (audience == "circle" ? "Circle" : "Public"))
+                                .font(.system(size: 13, weight: .semibold))
+                            Spacer()
+                        }
+                        .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
@@ -1480,10 +1596,34 @@ struct CreatePostSheet: View {
                                 .frame(width: 36, height: 36)
                         }
 
-                        Button {
-                            selectedLocation = selectedLocation == nil ? "Cape Town, SA" : nil
-                        } label: {
+                        Button { showLocation = true } label: {
                             Image(systemName: "mappin.and.ellipse")
+                                .font(.system(size: 20))
+                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                                .frame(width: 36, height: 36)
+                        }
+                        Button { showMood = true } label: {
+                            Image(systemName: "face.smiling")
+                                .font(.system(size: 20))
+                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                                .frame(width: 36, height: 36)
+                        }
+                        Button {
+                            scheduledAt = scheduledAt == nil ? Int64(Date().addingTimeInterval(3600).timeIntervalSince1970 * 1000) : nil
+                        } label: {
+                            Image(systemName: "clock")
+                                .font(.system(size: 20))
+                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                                .frame(width: 36, height: 36)
+                        }
+                        Button { showCollaborators = true } label: {
+                            Image(systemName: "person.2")
+                                .font(.system(size: 20))
+                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                                .frame(width: 36, height: 36)
+                        }
+                        Button { toggleVoice() } label: {
+                            Image(systemName: recording ? "stop.circle" : "mic")
                                 .font(.system(size: 20))
                                 .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
                                 .frame(width: 36, height: 36)
@@ -1532,7 +1672,119 @@ struct CreatePostSheet: View {
             .sheet(isPresented: $showAiAssist) {
                 AiAssistSheetView(initialText: postText) { text, _ in
                     postText = String(text.prefix(charLimit))
+                    aiAssisted = true
                 }
+            }
+            .confirmationDialog("Who can see this", isPresented: $showAudience, titleVisibility: .visible) {
+                Button("Public") { audience = "public"; circleId = "" }
+                Button("Followers only") { audience = "followers"; circleId = "" }
+                ForEach(circles, id: \.id) { circle in
+                    Button(circle.name) { audience = "circle"; circleId = circle.id }
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+            .confirmationDialog("Mood", isPresented: $showMood, titleVisibility: .visible) {
+                ForEach(["Feeling creative", "Hot take", "Question", "Excited", "Grateful"], id: \.self) { item in
+                    Button(item) { mood = item }
+                }
+                Button("Clear", role: .destructive) { mood = "" }
+                Button("Cancel", role: .cancel) {}
+            }
+            .alert("Location", isPresented: $showLocation) {
+                TextField("Place", text: $locationDraft)
+                Button("Save") { selectedLocation = locationDraft.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
+                Button("Cancel", role: .cancel) {}
+            }
+            .alert("Collaborators", isPresented: $showCollaborators) {
+                TextField("Search people", text: $peopleQuery)
+                Button("Search") { Task { await searchPeople() } }
+                Button("Done", role: .cancel) {}
+            } message: {
+                Text(people.isEmpty ? collaborators.map(\.name).joined(separator: ", ") : people.map(\.name).joined(separator: ", "))
+            }
+            .task {
+                await loadDraft()
+                await loadCircles()
+            }
+            .onChange(of: postText) { _ in
+                Task {
+                    try? await Task.sleep(nanoseconds: 800_000_000)
+                    await saveDraft()
+                }
+            }
+        }
+    }
+
+    private func loadDraft() async {
+        guard let data = try? await API.data("compose/draft"),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+        let content = json["content"] as? String ?? ""
+        guard postText.isEmpty, !content.isEmpty else { return }
+        postText = String(content.prefix(charLimit))
+        mood = json["mood"] as? String ?? ""
+        audience = json["audience"] as? String ?? "public"
+        circleId = json["circle_id"] as? String ?? ""
+        draftLabel = "Draft restored"
+    }
+
+    private func saveDraft() async {
+        guard !postText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        draftLabel = "Saving draft"
+        _ = try? await API.data("compose/draft", method: "PUT", json: [
+            "content": postText, "mood": mood, "audience": audience, "circle_id": circleId
+        ])
+        draftLabel = "Draft saved"
+    }
+
+    private func loadCircles() async {
+        guard let data = try? await API.data("circles"),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let rows = json["circles"] as? [[String: Any]] else { return }
+        circles = rows.compactMap { row in
+            let id = row["id"] as? String ?? ""
+            guard !id.isEmpty else { return nil }
+            return (id, (row["name"] as? String)?.isEmpty == false ? (row["name"] as? String ?? "Circle") : "Circle")
+        }
+    }
+
+    private func searchPeople() async {
+        guard peopleQuery.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2,
+              let data = try? await API.data("compose/people", query: ["q": peopleQuery]),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let rows = json["people"] as? [[String: Any]] else { return }
+        people = rows.compactMap { row in
+            let id = row["id"] as? String ?? ""
+            guard !id.isEmpty else { return nil }
+            let handle = row["handle"] as? String ?? ""
+            let name = handle.isEmpty ? (row["name"] as? String ?? "User") : handle
+            return (id, name)
+        }
+        if let first = people.first, collaborators.allSatisfy({ $0.id != first.id }) {
+            collaborators.append(first)
+        }
+    }
+
+    private func toggleVoice() {
+        if recording {
+            recorder?.stop()
+            recording = false
+            return
+        }
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("post-voice-\(UUID().uuidString).m4a")
+        let settings: [String: Any] = [
+            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+            AVSampleRateKey: 44100,
+            AVNumberOfChannelsKey: 1
+        ]
+        AVAudioSession.sharedInstance().requestRecordPermission { allowed in
+            guard allowed else { return }
+            DispatchQueue.main.async {
+                try? AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .default)
+                try? AVAudioSession.sharedInstance().setActive(true)
+                recorder = try? AVAudioRecorder(url: file, settings: settings)
+                recorder?.record()
+                voiceURL = file
+                recording = true
             }
         }
     }
@@ -1558,9 +1810,22 @@ struct CreatePostSheet: View {
                 urls.append(url)
             }
         }
+        if let voiceURL, let data = try? Data(contentsOf: voiceURL),
+           let url = try? await MediaActions.upload(data: data, filename: "post-voice.m4a", mime: "audio/mp4", folder: "posts") {
+            urls.append(url)
+        }
 
         let text = postText.trimmingCharacters(in: .whitespacesAndNewlines)
-        onPost(text, urls)
+        var compose: [String: Any] = [
+            "content": text,
+            "mood": mood,
+            "audience": audience,
+            "circle_id": circleId,
+            "ai_assisted": aiAssisted,
+            "collaborators": collaborators.map(\.id)
+        ]
+        if let scheduledAt { compose["scheduled_at"] = scheduledAt }
+        onPost(text, urls, selectedLocation ?? "", compose)
         dismiss()
     }
 }
@@ -1709,29 +1974,9 @@ struct ShortsFeedView: View {
                 .ignoresSafeArea()
             }
         }
-        .onChange(of: page) { newPage in
+        .onChange(of: page) { _ in
             shortPaused = false
             shortProgress = 0
-            guard shorts.indices.contains(newPage), (newPage + 1) % 8 == 0, !dismissedShortAds.contains(newPage) else { return }
-            #if canImport(GoogleMobileAds)
-            if NativeAdPool.shared.claim(slot: "short-\(newPage)") != nil {
-                showShortsAd = true
-            } else {
-                dismissedShortAds.insert(newPage)
-            }
-            #else
-            dismissedShortAds.insert(newPage)
-            #endif
-        }
-        .fullScreenCover(isPresented: $showShortsAd) {
-            #if canImport(GoogleMobileAds)
-            NativeAdCover(continueTitle: "Continue", slot: "short-\(page)") {
-                dismissedShortAds.insert(page)
-                showShortsAd = false
-            }
-            #else
-            Color.clear.onAppear { showShortsAd = false }
-            #endif
         }
         .fullScreenCover(isPresented: Binding(get: { selectedShort != nil }, set: { if !$0 { selectedShort = nil } })) {
             if let post = selectedShort {

@@ -5,12 +5,16 @@ import UIKit
 import GoogleMobileAds
 #endif
 
+// Real iOS ads start after these Info.plist keys contain the iOS AdMob token:
+// GADApplicationIdentifier, TJAdBannerUnit, TJAdNativeUnit, TJAdRewardedUnit.
 enum AdConfig {
     static var appId: String { value("GADApplicationIdentifier") }
     static var bannerUnit: String? { unit("TJAdBannerUnit") }
     static var nativeUnit: String? { unit("TJAdNativeUnit") }
     static var rewardedUnit: String? { unit("TJAdRewardedUnit") }
-    static var isConfigured: Bool { appId.contains("ca-app-pub-") }
+    static var isConfigured: Bool {
+        appId.contains("ca-app-pub-") && nativeUnit != nil
+    }
 
     private static func unit(_ key: String) -> String? {
         let raw = value(key)
@@ -332,14 +336,11 @@ final class NativeAdPool: NSObject, GADNativeAdLoaderDelegate {
 
     func claim(slot: String) -> GADNativeAd? {
         if let existing = claimed[slot] { return existing }
-        if skipped.contains(slot) { return nil }
         warm()
-        guard let ad = ready.first else {
-            skipped.insert(slot)
-            return nil
-        }
+        guard let ad = ready.first else { return nil }
         ready.removeFirst()
         claimed[slot] = ad
+        skipped.remove(slot)
         warm()
         return ad
     }

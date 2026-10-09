@@ -38,10 +38,6 @@ targets:
           - audio
           - remote-notification
           - voip
-        GADApplicationIdentifier: "ca-app-pub-4322207563956922~1108788212"
-        TJAdBannerUnit: "ca-app-pub-4322207563956922/5798752977"
-        TJAdNativeUnit: "ca-app-pub-4322207563956922/1859507960"
-        TJAdRewardedUnit: "ca-app-pub-4322207563956922/5594828136"
     dependencies:
       - package: GoogleSignIn
       - package: WebRTC
