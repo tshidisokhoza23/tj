@@ -480,8 +480,14 @@ struct SocialFeedView: View {
                                 .font(.system(size: 13, weight: .black))
                                 .padding(.horizontal, 18)
                                 .padding(.vertical, 8)
-                                .background(isSelected ? Color.appPrimary : Color(UIColor.secondarySystemBackground))
-                                .foregroundColor(isSelected ? .white : .primary)
+                                .foregroundColor(isSelected ? .white : AppColors.tealAccent)
+                                .background {
+                                    if isSelected {
+                                        AppColors.primaryGradient
+                                    } else {
+                                        AppColors.surfaceElevated
+                                    }
+                                }
                                 .clipShape(Capsule())
                         }
                     }
@@ -498,10 +504,13 @@ struct SocialFeedView: View {
                 Button("Topics I follow") { qualityMode = "topics" }
                 Button("Anti-ragebait filter") { qualityMode = "calm" }
             } label: {
-                Text("Quality: \(qualityLabel) ▾")
+                Text("Quality mode ▾  \(qualityLabel)")
                     .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppColors.tealAccent)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
+                    .background(AppColors.surfaceElevated)
+                    .clipShape(Capsule())
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 6)
@@ -1313,24 +1322,34 @@ private struct SocialMenuSheet: View {
     var onCreator: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Social").font(.headline).padding(.top, 16).padding(.bottom, 8)
-            menuRow("View Profile", onProfile)
-            menuRow("Create Post", onCreate)
-            menuRow("Circles", onCircles)
-            menuRow("Creator dashboard", onCreator)
-            menuRow("Notifications", onNotifications)
-            menuRow("Direct Messages", onMessages)
-            menuRow("Settings", onSettings)
-            menuRow("Saved Posts", onSaved)
+        VStack(alignment: .leading, spacing: 0) {
+            Capsule().fill(AppColors.borderDark).frame(width: 40, height: 4).frame(maxWidth: .infinity).padding(.top, 10)
+            menuRow("person", "View Profile", onProfile)
+            menuRow("square.and.pencil", "Create Post", onCreate)
+            menuRow("bell", "Notifications", onNotifications)
+            menuRow("paperplane", "Direct Messages", onMessages)
+            Divider().background(AppColors.borderDark).padding(.vertical, 6)
+            menuRow("circle.grid.2x2", "Circles", onCircles)
+            menuRow("doc", "Drafts", onCreate)
+            menuRow("chart.bar", "Analytics", onCreator)
+            menuRow("dollarsign.circle", "Creator Dashboard", onCreator)
+            Divider().background(AppColors.borderDark).padding(.vertical, 6)
+            menuRow("bookmark", "Saved Posts", onSaved)
+            menuRow("gearshape", "Settings", onSettings)
             Spacer()
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 20)
+        .background(Color(hex: "1F1F1F"))
     }
 
-    private func menuRow(_ title: String, _ action: @escaping () -> Void) -> some View {
+    private func menuRow(_ icon: String, _ title: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).foregroundColor(.primary).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
+            HStack(spacing: 14) {
+                Image(systemName: icon).font(.system(size: 18)).foregroundColor(AppColors.tealAccent).frame(width: 22)
+                Text(title).font(.system(size: 16)).foregroundColor(.white)
+                Spacer()
+            }
+            .frame(height: 52)
         }
     }
 }
@@ -1382,6 +1401,8 @@ struct CreatePostSheet: View {
     @State private var recording = false
     @State private var recorder: AVAudioRecorder?
     @State private var voiceURL: URL?
+    @State private var isArtist = false
+    @State private var artistTags: Set<String> = []
 
     private let charLimit = 280
 
@@ -1407,12 +1428,24 @@ struct CreatePostSheet: View {
                         Image(systemName: "xmark").font(.system(size: 16, weight: .bold)).foregroundColor(.primary)
                     }
                 }
+                ToolbarItem(placement: .principal) {
+                    VStack(spacing: 0) {
+                        Text("\(max(charLimit - postText.count, 0))")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(postText.count > charLimit ? AppColors.error : AppColors.tealAccent)
+                        if !draftLabel.isEmpty {
+                            Text(draftLabel).font(.system(size: 11)).foregroundColor(AppColors.textTertiary)
+                        }
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(replyToPost != nil ? "Reply" : "Post") { Task { await publish() } }
-                        .font(.system(size: 14, weight: .bold))
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 7)
-                        .background(canPost && !isPosting ? Color(red: 0.114, green: 0.608, blue: 0.941) : Color.gray.opacity(0.4))
+                    Button(replyToPost != nil ? "Reply" : "Share") { Task { await publish() } }
+                        .font(.system(size: 15, weight: .bold))
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                        .background {
+                            if canPost && !isPosting { AppColors.primaryGradient } else { Color.gray.opacity(0.4) }
+                        }
                         .foregroundColor(.white)
                         .clipShape(Capsule())
                         .disabled(!canPost || isPosting)
@@ -1454,7 +1487,7 @@ struct CreatePostSheet: View {
             } message: {
                 Text(people.isEmpty ? "Search by name" : people.map(\.name).joined(separator: ", "))
             }
-            .task { await loadDraft(); await loadCircles() }
+            .task { await loadDraft(); await loadCircles(); await loadArtistFlag() }
             .onChange(of: postText) { _ in Task { try? await Task.sleep(nanoseconds: 800_000_000); await saveDraft() } }
         }
     }
@@ -1497,6 +1530,52 @@ ScrollView {
             .font(.system(size: 18))
             .lineSpacing(4)
             .frame(minHeight: 100, alignment: .topLeading)
+        }
+
+        if !mood.isEmpty {
+            Text(mood + " ✨")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(AppColors.tealAccent)
+                .padding(.horizontal, 12)
+                .frame(height: 32)
+                .background(AppColors.surfaceElevated)
+                .overlay(Capsule().stroke(AppColors.borderDark, lineWidth: 1))
+                .clipShape(Capsule())
+        }
+
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach([("Hot take", "Hot take: "), ("Question", "Question: "), ("Thread", "Thread:\n"), ("Announcement", "Announcement: ")], id: \.0) { label, prefix in
+                    Button(label) {
+                        if !postText.hasPrefix(prefix) { postText = prefix + postText }
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(AppColors.tealAccent)
+                    .padding(.horizontal, 12)
+                    .frame(height: 36)
+                    .background(AppColors.surfaceElevated)
+                    .overlay(Capsule().stroke(AppColors.borderDark, lineWidth: 1))
+                    .clipShape(Capsule())
+                }
+            }
+        }
+
+        if isArtist {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(["Add to Portfolio", "Process / WIP", "Part of Series", "Open for Commissions"], id: \.self) { tag in
+                        Button(tag) {
+                            if artistTags.contains(tag) { artistTags.remove(tag) } else { artistTags.insert(tag) }
+                        }
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(artistTags.contains(tag) ? .white : AppColors.tealAccent)
+                        .padding(.horizontal, 12)
+                        .frame(height: 32)
+                        .background(artistTags.contains(tag) ? AnyShapeStyle(AppColors.primaryGradient) : AnyShapeStyle(AppColors.surfaceElevated))
+                        .clipShape(Capsule())
+                    }
+                }
+            }
         }
 
         // Location Badge
@@ -1744,6 +1823,13 @@ VStack(spacing: 8) {
         draftLabel = "Draft saved"
     }
 
+    private func loadArtistFlag() async {
+        guard let data = try? await API.data("users/me"),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+        let user = json["user"] as? [String: Any] ?? json
+        isArtist = user["is_artist"] as? Bool ?? false
+    }
+
     private func loadCircles() async {
         guard let data = try? await API.data("circles"),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -1823,7 +1909,11 @@ VStack(spacing: 8) {
             urls.append(url)
         }
 
-        let text = postText.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = postText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !artistTags.isEmpty {
+            let extra = artistTags.sorted().joined(separator: " · ")
+            if !text.contains(extra) { text = text.isEmpty ? extra : text + "\n" + extra }
+        }
         var compose: [String: Any] = [
             "content": text,
             "mood": mood,

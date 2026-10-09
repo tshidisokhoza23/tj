@@ -26,23 +26,27 @@ public extension Color {
     }
 
     static let darkCharcoal = Color(hex: "1A1A1A")
-    static let cardDark = Color(hex: "242424")
+    static let cardDark = Color(hex: "222222")
     static let borderDark = Color(hex: "333333")
-    static let tealAccent = Color(hex: "00E5FF")
-    static let purpleAccent = Color(hex: "8A2BE2")
-    static let openGreen = Color(hex: "00E676")
-    static let waitlistOrange = Color(hex: "FF9100")
+    static let tealAccent = Color(hex: "14B8A6")
+    static let purpleAccent = Color(hex: "A855F7")
+    static let openGreen = Color(hex: "22C55E")
+    static let waitlistOrange = Color(hex: "F59E0B")
+    static let textSecondary = Color(hex: "A1A1AA")
+    static let textTertiary = Color(hex: "71717A")
+    static let surfaceElevated = Color(hex: "2A2A2A")
+    static let errorRed = Color(hex: "EF4444")
 
-    static let appPrimary = Color(hex: "00E5FF")
-    static let appAccent = Color(hex: "8A2BE2")
+    static let appPrimary = Color(hex: "14B8A6")
+    static let appAccent = Color(hex: "A855F7")
     static let appSecondary = Color(hex: "242424")
     static let appBackgroundLight = Color(hex: "F5F5F5")
     static let appBackgroundDarkTop = Color(hex: "1A1A1A")
     static let appBackgroundDarkBottom = Color(hex: "1A1A1A")
     static let appBottomNavBg = Color(hex: "1A1A1A")
     static let appBottomNavPill = Color(hex: "242424")
-    static let logoBlueDark = Color(hex: "00E5FF")
-    static let boyishPurple = Color(hex: "8A2BE2")
+    static let logoBlueDark = Color(hex: "14B8A6")
+    static let boyishPurple = Color(hex: "A855F7")
 }
 
 public struct AppColors {
@@ -66,11 +70,15 @@ public struct AppColors {
     public static let brandAccent = Color.purpleAccent
     public static let darkBackgroundTop = Color.darkCharcoal
     public static let darkBackgroundBottom = Color.darkCharcoal
-    public static let greyMedium = Color.gray
-    public static let greyLight = Color(hex: "242424")
+    public static let greyMedium = Color.textSecondary
+    public static let greyLight = Color.surfaceElevated
+    public static let textSecondary = Color.textSecondary
+    public static let textTertiary = Color.textTertiary
+    public static let surfaceElevated = Color.surfaceElevated
+    public static let error = Color.errorRed
 
     public static let primaryGradient = LinearGradient(
-        colors: [Color.purpleAccent, Color.tealAccent],
+        colors: [Color(hex: "A855F7"), Color(hex: "14B8A6")],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
