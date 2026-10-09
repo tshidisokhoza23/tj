@@ -1,73 +1,107 @@
 import SwiftUI
 
-struct SideNavMenuSheet: View {
+public struct SideNavMenuSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    var onSelectViewProfile: () -> Void
-    var onSelectCreatePost: () -> Void
-    var onSelectNotifications: () -> Void
-    var onSelectDirectMessages: () -> Void
-    var onSelectSettings: () -> Void
-    var onSelectSavedPosts: () -> Void
+    var onProfileClick: () -> Void = {}
+    var onCreatePostClick: () -> Void = {}
+    var onNotificationsClick: () -> Void = {}
+    var onCirclesClick: () -> Void = {}
+    var onCreatorDashboardClick: () -> Void = {}
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Capsule()
-                .fill(Color.secondary.opacity(0.3))
-                .frame(width: 40, height: 4)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
+    @State private var showCirclesSheet: Bool = false
+    @State private var showCreatorDashboardSheet: Bool = false
 
-            MenuRow(icon: "person.fill", text: "View Profile") {
-                dismiss()
-                onSelectViewProfile()
-            }
-            MenuRow(icon: "plus", text: "Create Post") {
-                dismiss()
-                onSelectCreatePost()
-            }
-            MenuRow(icon: "bell.fill", text: "Notifications") {
-                dismiss()
-                onSelectNotifications()
-            }
-            MenuRow(icon: "envelope.fill", text: "Direct Messages") {
-                dismiss()
-                onSelectDirectMessages()
-            }
-            MenuRow(icon: "gearshape.fill", text: "Settings") {
-                dismiss()
-                onSelectSettings()
-            }
-            MenuRow(icon: "bookmark.fill", text: "Saved Posts") {
-                dismiss()
-                onSelectSavedPosts()
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 24)
-        .presentationDetents([.fraction(0.45)])
+    public init(
+        onProfileClick: @escaping () -> Void = {},
+        onCreatePostClick: @escaping () -> Void = {},
+        onNotificationsClick: @escaping () -> Void = {},
+        onCirclesClick: @escaping () -> Void = {},
+        onCreatorDashboardClick: @escaping () -> Void = {}
+    ) {
+        self.onProfileClick = onProfileClick
+        self.onCreatePostClick = onCreatePostClick
+        self.onNotificationsClick = onNotificationsClick
+        self.onCirclesClick = onCirclesClick
+        self.onCreatorDashboardClick = onCreatorDashboardClick
     }
-}
 
-private struct MenuRow: View {
-    let icon: String
-    let text: String
-    let action: () -> Void
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Group {
+                menuButton(icon: "person", title: "View Profile") {
+                    dismiss()
+                    onProfileClick()
+                }
 
-    var body: some View {
+                menuButton(icon: "plus.app", title: "Create Post") {
+                    dismiss()
+                    onCreatePostClick()
+                }
+
+                menuButton(icon: "bell", title: "Notifications") {
+                    dismiss()
+                    onNotificationsClick()
+                }
+
+                menuButton(icon: "bubble.left.and.bubble.right", title: "Direct Messages") {
+                    dismiss()
+                }
+            }
+
+            Divider().background(AppColors.borderDark).padding(.vertical, 8)
+
+            Group {
+                menuButton(icon: "person.3", title: "Circles", accent: true) {
+                    showCirclesSheet = true
+                }
+
+                menuButton(icon: "square.grid.2x2", title: "Creator Dashboard", accent: true) {
+                    showCreatorDashboardSheet = true
+                }
+
+                menuButton(icon: "chart.bar", title: "Analytics") {
+                    dismiss()
+                }
+            }
+
+            Divider().background(AppColors.borderDark).padding(.vertical, 8)
+
+            Group {
+                menuButton(icon: "bookmark", title: "Saved Posts") {
+                    dismiss()
+                }
+
+                menuButton(icon: "gearshape", title: "Settings") {
+                    dismiss()
+                }
+            }
+
+            Spacer()
+        }
+        .padding()
+        .background(AppColors.darkCharcoal.ignoresSafeArea())
+        .sheet(isPresented: $showCirclesSheet) {
+            CirclesView()
+        }
+        .sheet(isPresented: $showCreatorDashboardSheet) {
+            CreatorDashboardView()
+        }
+    }
+
+    private func menuButton(icon: String, title: String, accent: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 16) {
                 Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .frame(width: 24)
-                    .foregroundColor(.primary)
-                Text(text)
-                    .font(.body)
-                    .foregroundColor(.primary)
+                    .font(.title3)
+                    .foregroundColor(accent ? AppColors.tealAccent : .white)
+                Text(title)
+                    .font(.headline)
+                    .fontWeight(accent ? .bold : .semibold)
+                    .foregroundColor(accent ? AppColors.tealAccent : .white)
                 Spacer()
             }
-            .padding(.vertical, 10)
+            .padding(.vertical, 12)
         }
     }
 }
