@@ -1872,8 +1872,13 @@ VStack(spacing: 8) {
     }
 
     private func artistCaption() async {
-        guard let image = uploadedURLs.first else {
-            note = "Upload a photo first, then ask for a caption."
+        var image = uploadedURLs.first
+        if image == nil, let data = loadedData.first {
+            image = try? await MediaActions.upload(data: data, filename: "caption.jpg", mime: "image/jpeg", folder: "posts")
+            if let image { uploadedURLs = [image] + uploadedURLs }
+        }
+        guard let image else {
+            note = "Add a photo first, then ask for a caption."
             return
         }
         do {
