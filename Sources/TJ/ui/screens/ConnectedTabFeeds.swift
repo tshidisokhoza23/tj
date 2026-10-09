@@ -408,6 +408,9 @@ struct SocialFeedView: View {
     @State private var showSocialNotes = false
     @State private var showSocialSettings = false
     @State private var showSocialSearch = false
+    @State private var showCircles = false
+    @State private var showCreatorDashboard = false
+    @State private var qualityMode = "balanced"
 
     private let categories = [
         ("all", "All"), ("tech", "Technology"), ("music", "Music"), ("gaming", "Gaming"),
@@ -464,6 +467,22 @@ struct SocialFeedView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 6)
             }
+
+            Menu {
+                Button("Off") { qualityMode = "off" }
+                Button("Balanced") { qualityMode = "balanced" }
+                Button("High quality only") { qualityMode = "high" }
+                Button("Following only") { qualityMode = "following" }
+                Button("Topics I follow") { qualityMode = "topics" }
+                Button("Anti-ragebait filter") { qualityMode = "calm" }
+            } label: {
+                Text("Quality: \(qualityLabel) ▾")
+                    .font(.system(size: 12, weight: .semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 6)
 
             Divider()
 
@@ -536,9 +555,17 @@ struct SocialFeedView: View {
                 onNotifications: { showSocialMenu = false; showSocialNotes = true },
                 onMessages: { showSocialMenu = false; onDirectMessagesClick() },
                 onSettings: { showSocialMenu = false; showSocialSettings = true },
-                onSaved: { showSocialMenu = false; showSavedPosts = true }
+                onSaved: { showSocialMenu = false; showSavedPosts = true },
+                onCircles: { showSocialMenu = false; showCircles = true },
+                onCreator: { showSocialMenu = false; showCreatorDashboard = true }
             )
             .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showCircles) {
+            CirclesView()
+        }
+        .sheet(isPresented: $showCreatorDashboard) {
+            CreatorDashboardView()
         }
         .sheet(isPresented: $showCreatePost) {
             CreatePostSheet { text, media in
@@ -666,9 +693,46 @@ struct SocialFeedView: View {
         selectedPost = post
     }
 
+    private var qualityLabel: String {
+        switch qualityMode {
+        case "off": return "Off"
+        case "high": return "High quality only"
+        case "following": return "Following only"
+        case "topics": return "Topics I follow"
+        case "calm": return "Anti-ragebait filter"
+        default: return "Balanced"
+        }
+    }
+
+    private func passesQuality(_ post: FeedPost) -> Bool {
+        switch qualityMode {
+        case "off", "balanced":
+            return true
+        case "high":
+            return !post.mediaURLs.isEmpty || post.likes >= 3 || post.views >= 20 || post.isVerifiedAuthor
+        case "following":
+            return post.isAuthorFollowed
+        case "topics":
+            return post.content.contains("#")
+        case "calm":
+            return !isShouty(post.content)
+        default:
+            return true
+        }
+    }
+
+    private func isShouty(_ content: String) -> Bool {
+        let letters = content.filter { $0.isLetter }
+        if letters.count >= 20 {
+            let upper = letters.filter { $0.isUppercase }.count
+            if upper * 10 >= letters.count * 7 { return true }
+        }
+        return content.contains("!!!")
+    }
+
     private var feedEntries: [SocialFeedEntry] {
         var rows: [SocialFeedEntry] = []
-        for (index, post) in posts.enumerated() where !post.id.isEmpty {
+        for (index, post) in posts.filter({ passesQuality($0) }).enumerated() where !post.id.isEmpty {
             rows.append(SocialFeedEntry(kind: .post(post)))
             if (index + 1) % 5 == 0 {
                 rows.append(SocialFeedEntry(kind: .ad("ad-feed-\(post.id)")))
@@ -1165,12 +1229,16 @@ private struct SocialMenuSheet: View {
     var onMessages: () -> Void
     var onSettings: () -> Void
     var onSaved: () -> Void
+    var onCircles: () -> Void
+    var onCreator: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Social").font(.headline).padding(.top, 16).padding(.bottom, 8)
             menuRow("View Profile", onProfile)
             menuRow("Create Post", onCreate)
+            menuRow("Circles", onCircles)
+            menuRow("Creator dashboard", onCreator)
             menuRow("Notifications", onNotifications)
             menuRow("Direct Messages", onMessages)
             menuRow("Settings", onSettings)
@@ -1202,6 +1270,7 @@ struct CreatePostSheet: View {
     @State private var pollOptions: [String] = ["", ""]
     @State private var isPosting = false
     @State private var note = ""
+    @State private var showAiAssist = false
 
     private let charLimit = 280
 
@@ -1403,6 +1472,15 @@ struct CreatePostSheet: View {
                         }
 
                         Button {
+                            showAiAssist = true
+                        } label: {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 20))
+                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                                .frame(width: 36, height: 36)
+                        }
+
+                        Button {
                             selectedLocation = selectedLocation == nil ? "Cape Town, SA" : nil
                         } label: {
                             Image(systemName: "mappin.and.ellipse")
@@ -1450,6 +1528,11 @@ struct CreatePostSheet: View {
             }
             .onChange(of: selectedPhotos) { _ in
                 Task { await loadSelectedPhotos(selectedPhotos) }
+            }
+            .sheet(isPresented: $showAiAssist) {
+                AiAssistSheetView(initialText: postText) { text, _ in
+                    postText = String(text.prefix(charLimit))
+                }
             }
         }
     }
