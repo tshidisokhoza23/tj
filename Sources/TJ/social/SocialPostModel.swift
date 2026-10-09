@@ -9,9 +9,27 @@ public struct SocialPost: Identifiable, Codable, Hashable {
     public let imageUrl: String?
     public var likesCount: Int
     public var commentsCount: Int
+    public var viewsCount: Int
     public var isLiked: Bool
+    public var isBookmarked: Bool
+    public var isAiImproved: Bool
+    public var tipCount: Int
 
-    public init(id: String, authorName: String, authorAvatar: String, timestamp: String, textContent: String, imageUrl: String?, likesCount: Int, commentsCount: Int, isLiked: Bool) {
+    public init(
+        id: String,
+        authorName: String,
+        authorAvatar: String,
+        timestamp: String,
+        textContent: String,
+        imageUrl: String?,
+        likesCount: Int,
+        commentsCount: Int,
+        viewsCount: Int = 120,
+        isLiked: Bool,
+        isBookmarked: Bool = false,
+        isAiImproved: Bool = false,
+        tipCount: Int = 0
+    ) {
         self.id = id
         self.authorName = authorName
         self.authorAvatar = authorAvatar
@@ -20,7 +38,11 @@ public struct SocialPost: Identifiable, Codable, Hashable {
         self.imageUrl = imageUrl
         self.likesCount = likesCount
         self.commentsCount = commentsCount
+        self.viewsCount = viewsCount
         self.isLiked = isLiked
+        self.isBookmarked = isBookmarked
+        self.isAiImproved = isAiImproved
+        self.tipCount = tipCount
     }
 }
 
@@ -49,35 +71,38 @@ public struct AdCardView: View {
                 Text("SPONSORED")
                     .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundColor(AppColors.brandPrimary)
+                    .foregroundColor(AppColors.tealAccent)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(AppColors.brandPrimary.opacity(0.1))
+                    .background(AppColors.tealAccent.opacity(0.1))
                     .cornerRadius(4)
 
                 Text(ad.sponsorName)
                     .font(.subheadline)
                     .fontWeight(.bold)
+                    .foregroundColor(.white)
                 Spacer()
             }
 
             Text(ad.headline)
                 .font(.headline)
+                .foregroundColor(.white)
 
             Button(action: {}) {
                 Text(ad.ctaText)
                     .font(.subheadline)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.black)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    .background(AppColors.brandPrimary)
+                    .background(AppColors.tealAccent)
                     .cornerRadius(12)
             }
         }
         .padding()
-        .background(Color(UIColor.secondarySystemBackground))
+        .background(AppColors.cardDark)
         .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
     }
 }
 
@@ -97,23 +122,28 @@ public struct CommentsSheetView: View {
                     Text("No comments yet. Be the first to comment!")
                         .foregroundColor(AppColors.greyMedium)
                 }
+                .background(AppColors.darkCharcoal)
 
                 HStack {
                     TextField("Add a comment...", text: $commentText)
                         .padding(10)
-                        .background(Color(UIColor.secondarySystemBackground))
+                        .background(AppColors.cardDark)
                         .cornerRadius(16)
+                        .foregroundColor(.white)
 
                     Button("Send") { commentText = "" }
+                        .foregroundColor(AppColors.tealAccent)
                         .disabled(commentText.isEmpty)
                 }
                 .padding()
             }
+            .background(AppColors.darkCharcoal)
             .navigationTitle("Comments")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Close") { dismiss() }
+                        .foregroundColor(.white)
                 }
             }
         }

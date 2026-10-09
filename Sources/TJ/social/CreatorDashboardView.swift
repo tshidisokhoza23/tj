@@ -12,6 +12,10 @@ public struct CreatorDashboardView: View {
     @State private var postViews: Int = 0
     @State private var newFollowers: Int = 0
     @State private var posts: [(String, Int, Int)] = []
+    @State private var requests: [(id: String, brief: String, status: String)] = []
+    @State private var active: [(id: String, brief: String, status: String)] = []
+    @State private var splits: [String] = []
+    @State private var exportText: String = ""
     @State private var note: String = ""
     @State private var settingsReady: Bool = false
 
@@ -25,6 +29,11 @@ public struct CreatorDashboardView: View {
             .background(AppColors.darkCharcoal.ignoresSafeArea())
             .navigationTitle("Creator Dashboard")
             .task { await loadDashboard() }
+            .alert("Your posts", isPresented: Binding(get: { !exportText.isEmpty }, set: { if !$0 { exportText = "" } })) {
+                Button("Close", role: .cancel) { exportText = "" }
+            } message: {
+                Text(exportText)
+            }
             .onChange(of: acceptTips) { _ in Task { await saveSettings() } }
             .onChange(of: acceptCommissions) { _ in Task { await saveSettings() } }
             .navigationBarTitleDisplayMode(.inline)
@@ -189,7 +198,7 @@ public struct CreatorDashboardView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                 Spacer()
-                Text("0 Pending")
+                Text("\(requests.count) Pending")
                     .font(.caption)
                     .fontWeight(.bold)
                     .foregroundColor(AppColors.tealAccent)
@@ -201,9 +210,21 @@ public struct CreatorDashboardView: View {
 
             Divider().background(AppColors.borderDark)
 
-            Text("No commission requests. This inbox stays empty until someone sends a real request.")
-                .font(.caption)
-                .foregroundColor(.gray)
+            if requests.isEmpty {
+                Text("No commission requests. This inbox stays empty until someone sends a real request.")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            } else {
+                ForEach(requests, id: \.id) { req in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(req.brief).foregroundColor(.white)
+                        HStack {
+                            Button("Accept") { Task { await updateCommission(req.id, "accepted") } }
+                            Button("Decline") { Task { await updateCommission(req.id, "declined") } }
+                        }
+                    }
+                }
+            }
         }
         .padding()
         .background(AppColors.cardDark)
@@ -217,9 +238,21 @@ public struct CreatorDashboardView: View {
                 .fontWeight(.bold)
                 .foregroundColor(.white)
 
-            Text("No active commissions.")
-                .font(.subheadline)
-                .foregroundColor(.gray)
+            if active.isEmpty {
+                Text("No active commissions.")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+            } else {
+                ForEach(active, id: \.id) { item in
+                    Text("\(item.status): \(item.brief)").foregroundColor(.white)
+                }
+            }
+            if !splits.isEmpty {
+                Text("Agreed tip shares").font(.headline).foregroundColor(.white)
+                ForEach(splits, id: \.self) { line in
+                    Text(line).font(.caption).foregroundColor(.gray)
+                }
+            }
         }
         .padding()
         .background(AppColors.cardDark)
@@ -249,24 +282,14 @@ public struct CreatorDashboardView: View {
                 .foregroundColor(.white)
                 .tint(AppColors.tealAccent)
 
-            HStack(spacing: 12) {
-                Button(action: {}) {
-                    Text("Set Prices")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(AppColors.tealAccent)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .overlay(Capsule().stroke(AppColors.tealAccent, lineWidth: 1))
-                }
-                Button(action: {}) {
-                    Text("Payout Settings")
-                        .font(.subheadline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .overlay(Capsule().stroke(Color.gray, lineWidth: 1))
-                }
+            Button(action: { Task { await exportPosts() } }) {
+                Text("Export my posts")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppColors.tealAccent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .overlay(Capsule().stroke(AppColors.tealAccent, lineWidth: 1))
             }
             .padding(.top, 8)
         }
@@ -294,6 +317,14 @@ public struct CreatorDashboardView: View {
             posts = rows.map { row in
                 (row["text"] as? String ?? "Post", row["views"] as? Int ?? 0, row["likes"] as? Int ?? 0)
             }
+            requests = Self.commissions(json["commission_requests"])
+            active = Self.commissions(json["active_commissions"])
+            splits = (json["revenue_splits"] as? [[String: Any]] ?? []).map { row in
+                let text = row["text"] as? String ?? "Post"
+                let percent = row["percent"] as? Int ?? 0
+                let share = row["agreed_share_cents"] as? Int ?? 0
+                return "\(percent)% of recorded tips on \(text): \(Self.rand(share))"
+            }
             note = ""
             settingsReady = true
         } catch {
@@ -307,6 +338,30 @@ public struct CreatorDashboardView: View {
             "accept_tips": acceptTips,
             "accept_commissions": acceptCommissions
         ])
+    }
+
+    private func updateCommission(_ id: String, _ status: String) async {
+        _ = try? await API.data("commissions/\(id)", method: "PUT", json: ["status": status])
+        await loadDashboard()
+    }
+
+    private func exportPosts() async {
+        guard let data = try? await API.data("export"),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            await MainActor.run { exportText = "Could not export posts." }
+            return
+        }
+        let rows = json["posts"] as? [[String: Any]] ?? []
+        let text = rows.isEmpty ? "No posts to export." : rows.map { $0["content"] as? String ?? "" }.joined(separator: "\n\n")
+        await MainActor.run { exportText = text }
+    }
+
+    private static func commissions(_ raw: Any?) -> [(id: String, brief: String, status: String)] {
+        (raw as? [[String: Any]] ?? []).compactMap { row in
+            let id = row["id"] as? String ?? ""
+            guard !id.isEmpty else { return nil }
+            return (id, row["brief"] as? String ?? "Commission", row["status"] as? String ?? "")
+        }
     }
 
     private static func rand(_ cents: Int) -> String {

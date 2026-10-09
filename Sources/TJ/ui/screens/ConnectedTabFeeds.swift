@@ -433,6 +433,8 @@ struct SocialFeedView: View {
     @State private var showCreatorDashboard = false
     @State private var qualityMode = "balanced"
     @State private var postContext = ""
+    @State private var contextPostId = ""
+    @State private var contextNoteId = ""
 
     private let categories = [
         ("all", "All"), ("tech", "Technology"), ("music", "Music"), ("gaming", "Gaming"),
@@ -497,12 +499,12 @@ struct SocialFeedView: View {
             }
 
             Menu {
-                Button("Off") { qualityMode = "off" }
-                Button("Balanced") { qualityMode = "balanced" }
-                Button("High quality only") { qualityMode = "high" }
-                Button("Following only") { qualityMode = "following" }
-                Button("Topics I follow") { qualityMode = "topics" }
-                Button("Anti-ragebait filter") { qualityMode = "calm" }
+                Button("Off") { setQuality("off") }
+                Button("Balanced") { setQuality("balanced") }
+                Button("High quality only") { setQuality("high") }
+                Button("Following only") { setQuality("following") }
+                Button("Topics I follow") { setQuality("topics") }
+                Button("Anti-ragebait filter") { setQuality("calm") }
             } label: {
                 Text("Quality mode ▾  \(qualityLabel)")
                     .font(.system(size: 12, weight: .semibold))
@@ -628,8 +630,17 @@ struct SocialFeedView: View {
         .sheet(isPresented: $showSocialSettings) {
             SettingsView(router: NavigationRouter())
         }
-        .alert("Post context", isPresented: Binding(get: { !postContext.isEmpty }, set: { if !$0 { postContext = "" } })) {
-            Button("OK", role: .cancel) { postContext = "" }
+        .alert("Post context", isPresented: Binding(get: { !postContext.isEmpty }, set: { if !$0 { postContext = ""; contextNoteId = "" } })) {
+            Button("OK", role: .cancel) { postContext = ""; contextNoteId = "" }
+            if !contextNoteId.isEmpty {
+                Button("Mark note helpful") {
+                    let postId = contextPostId
+                    let noteId = contextNoteId
+                    postContext = ""
+                    contextNoteId = ""
+                    Task { _ = try? await API.data("posts/\(postId)/notes/\(noteId)/vote", method: "POST", json: ["helpful": true]) }
+                }
+            }
         } message: {
             Text(postContext)
         }
@@ -638,6 +649,11 @@ struct SocialFeedView: View {
             Button("Notes, edits, and reputation") {
                 if let post = moreTarget {
                     Task { await showPostContext(post) }
+                }
+            }
+            Button("Request a commission") {
+                if let post = moreTarget {
+                    Task { await requestCommission(post) }
                 }
             }
             Button("Copy link") { if let post = moreTarget { MediaActions.copyLink(post) } }
@@ -700,24 +716,49 @@ struct SocialFeedView: View {
     }
 
     private func showPostContext(_ post: FeedPost) async {
-        async let notesData = try? API.data("posts/\(post.id)/notes")
+        async let contextData = try? API.data("posts/\(post.id)/context")
         async let editsData = try? API.data("posts/\(post.id)/edits")
         let author = post.authorId.isEmpty ? "me" : post.authorId
         async let scoreData = try? API.data("reputation/\(author)")
-        let notesJSON = (try? JSONSerialization.jsonObject(with: await notesData ?? Data())) as? [String: Any]
+        let contextJSON = (try? JSONSerialization.jsonObject(with: await contextData ?? Data())) as? [String: Any]
         let editsJSON = (try? JSONSerialization.jsonObject(with: await editsData ?? Data())) as? [String: Any]
         let scoreJSON = (try? JSONSerialization.jsonObject(with: await scoreData ?? Data())) as? [String: Any]
-        let notes = (notesJSON?["notes"] as? [[String: Any]])?.compactMap { row -> String? in
+        let noteRows = contextJSON?["notes"] as? [[String: Any]] ?? []
+        let notes = noteRows.compactMap { row -> String? in
             let body = row["body"] as? String ?? ""
             guard !body.isEmpty else { return nil }
-            return "@\(row["author"] as? String ?? "user"): \(body)"
-        } ?? []
+            let helpful = row["helpful_count"] as? Int ?? 0
+            return "@\(row["author"] as? String ?? "user"): \(body) (\(helpful) helpful)"
+        }
+        let links = contextJSON?["links"] as? [String] ?? []
         let edits = (editsJSON?["edits"] as? [[String: Any]])?.compactMap { $0["previous_text"] as? String } ?? []
         let score = scoreJSON?["score"] as? Int ?? 0
         let explanation = scoreJSON?["note"] as? String ?? "Reputation uses real posts, replies, and followers."
+        let noteId = noteRows.first?["id"] as? String ?? ""
         await MainActor.run {
-            postContext = "\(explanation)\nScore \(score).\n\nCommunity notes\n\(notes.isEmpty ? "None yet." : notes.joined(separator: "\n"))\n\nEdit history\n\(edits.isEmpty ? "No edits." : edits.joined(separator: "\n"))"
+            contextPostId = post.id
+            contextNoteId = noteId
+            postContext = "\(explanation)\nScore \(score).\n\nLinks\n\(links.isEmpty ? "None." : links.joined(separator: "\n"))\n\nCommunity notes\n\(notes.isEmpty ? "None yet." : notes.joined(separator: "\n"))\n\nEdit history\n\(edits.isEmpty ? "No edits." : edits.joined(separator: "\n"))"
         }
+    }
+
+    private func requestCommission(_ post: FeedPost) async {
+        let artist = post.authorId
+        guard !artist.isEmpty else { return }
+        do {
+            _ = try await API.data("commissions", method: "POST", json: ["artist_id": artist, "brief": "Commission request from your post"])
+            await MainActor.run { status = "Commission request sent." }
+        } catch {
+            await MainActor.run { status = error.localizedDescription }
+        }
+    }
+
+    private func setQuality(_ mode: String) {
+        qualityMode = mode
+        posts = []
+        nextOffset = 0
+        hasMore = true
+        Task { await load(reset: true) }
     }
 
     private func share(_ id: String) {
@@ -766,35 +807,9 @@ struct SocialFeedView: View {
         }
     }
 
-    private func passesQuality(_ post: FeedPost) -> Bool {
-        switch qualityMode {
-        case "off", "balanced":
-            return true
-        case "high":
-            return !post.mediaURLs.isEmpty || post.likes >= 3 || post.views >= 20 || post.isVerifiedAuthor
-        case "following":
-            return post.isAuthorFollowed
-        case "topics":
-            return post.content.contains("#")
-        case "calm":
-            return !isShouty(post.content)
-        default:
-            return true
-        }
-    }
-
-    private func isShouty(_ content: String) -> Bool {
-        let letters = content.filter { $0.isLetter }
-        if letters.count >= 20 {
-            let upper = letters.filter { $0.isUppercase }.count
-            if upper * 10 >= letters.count * 7 { return true }
-        }
-        return content.contains("!!!")
-    }
-
     private var feedEntries: [SocialFeedEntry] {
         var rows: [SocialFeedEntry] = []
-        for (index, post) in posts.filter({ passesQuality($0) }).enumerated() where !post.id.isEmpty {
+        for (index, post) in posts.enumerated() where !post.id.isEmpty {
             rows.append(SocialFeedEntry(kind: .post(post)))
             if AdConfig.nativeUnit != nil, (index + 1) % 5 == 0 {
                 rows.append(SocialFeedEntry(kind: .ad("feed-ad-\((index + 1) / 5)")))
@@ -809,7 +824,7 @@ struct SocialFeedView: View {
         loadingMore = true
         defer { loadingMore = false }
         let pageOffset = reset ? 0 : nextOffset
-        var query = ["limit": "15", "offset": "\(pageOffset)"]
+        var query = ["limit": "15", "offset": "\(pageOffset)", "quality": qualityMode]
         let categoryId = categories[selectedCategory].0
         if categoryId != "all" { query["category_id"] = categoryId }
         if reset && posts.isEmpty, let cached = AppDiskCache.loadResponse(path: "media/feed", query: query) {
@@ -1403,6 +1418,10 @@ struct CreatePostSheet: View {
     @State private var voiceURL: URL?
     @State private var isArtist = false
     @State private var artistTags: Set<String> = []
+    @State private var showGifs = false
+    @State private var gifQuery = ""
+    @State private var gifNote = "Search real GIFs. A token is required on the server."
+    @State private var gifs: [(title: String, url: String)] = []
 
     private let charLimit = 280
 
@@ -1486,6 +1505,13 @@ struct CreatePostSheet: View {
                 Button("Done", role: .cancel) {}
             } message: {
                 Text(people.isEmpty ? "Search by name" : people.map(\.name).joined(separator: ", "))
+            }
+            .alert("GIFs", isPresented: $showGifs) {
+                TextField("Search", text: $gifQuery)
+                Button("Search") { Task { await searchGifs() } }
+                Button("Close", role: .cancel) {}
+            } message: {
+                Text(gifs.isEmpty ? gifNote : gifs.map(\.title).joined(separator: "\n"))
             }
             .task { await loadDraft(); await loadCircles(); await loadArtistFlag() }
             .onChange(of: postText) { _ in Task { try? await Task.sleep(nanoseconds: 800_000_000); await saveDraft() } }
@@ -1747,6 +1773,26 @@ VStack(spacing: 8) {
                 .frame(width: 36, height: 36)
         }
 
+        Button { showGifs = true } label: {
+            Image(systemName: "face.smiling.inverse")
+                .font(.system(size: 20))
+                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                .frame(width: 36, height: 36)
+        }
+        Button { Task { await artistCaption() } } label: {
+            Image(systemName: "wand.and.stars")
+                .font(.system(size: 20))
+                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                .frame(width: 36, height: 36)
+        }
+        if replyToPost != nil {
+            Button { Task { await suggestReply() } } label: {
+                Image(systemName: "text.bubble")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                    .frame(width: 36, height: 36)
+            }
+        }
         Button {
             showAiAssist = true
         } label: {
@@ -1800,6 +1846,56 @@ VStack(spacing: 8) {
     .padding(.bottom, 8)
 }
 .background(Color(UIColor.secondarySystemBackground))
+    }
+
+    private func searchGifs() async {
+        do {
+            let data = try await API.data("gifs", query: ["q": gifQuery])
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            let rows = json?["gifs"] as? [[String: Any]] ?? []
+            let found = rows.compactMap { row -> (title: String, url: String)? in
+                let url = row["url"] as? String ?? ""
+                guard !url.isEmpty else { return nil }
+                return (row["title"] as? String ?? url, url)
+            }
+            await MainActor.run {
+                gifs = found
+                gifNote = found.isEmpty ? "No GIFs found." : ""
+                if let first = found.first {
+                    postText = [postText, first.url].filter { !$0.isEmpty }.joined(separator: "\n")
+                    showGifs = false
+                }
+            }
+        } catch {
+            await MainActor.run { gifNote = error.localizedDescription }
+        }
+    }
+
+    private func artistCaption() async {
+        guard let image = uploadedURLs.first else {
+            note = "Upload a photo first, then ask for a caption."
+            return
+        }
+        do {
+            let data = try await API.data("ai/artist-helper", method: "POST", json: ["image_url": image, "story": "Write a caption for this image.", "title": "Photo"])
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            let caption = (json?["caption"] as? String) ?? (json?["result"] as? String) ?? ""
+            await MainActor.run { if !caption.isEmpty { postText = caption } }
+        } catch {
+            await MainActor.run { note = error.localizedDescription }
+        }
+    }
+
+    private func suggestReply() async {
+        guard let id = replyToPost?.id, !id.isEmpty else { return }
+        do {
+            let data = try await API.data("ai/smart-replies", query: ["post_id": id])
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            let reply = (json?["suggestions"] as? [String])?.first ?? (json?["replies"] as? [String])?.first ?? ""
+            await MainActor.run { if !reply.isEmpty { postText = reply } }
+        } catch {
+            await MainActor.run { note = error.localizedDescription }
+        }
     }
 
     private func loadDraft() async {
@@ -1920,7 +2016,8 @@ VStack(spacing: 8) {
             "audience": audience,
             "circle_id": circleId,
             "ai_assisted": aiAssisted,
-            "collaborators": collaborators.map(\.id)
+            "collaborators": collaborators.map(\.id),
+            "splits": collaborators.isEmpty ? [] : collaborators.map { ["user_id": $0.id, "percent": max(1, 100 / (collaborators.count + 1))] }
         ]
         if let scheduledAt { compose["scheduled_at"] = scheduledAt }
         onPost(text, urls, selectedLocation ?? "", compose)
@@ -2910,9 +3007,26 @@ private struct HashtagResultsSheet: View {
             }
             .overlay { if posts.isEmpty { Text(note).foregroundColor(.secondary).padding() } }
             .navigationTitle("#\(tag)")
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Follow") { Task { await followTopic() } }
+                }
+            }
             .task { await load() }
         }
+    }
+
+    private func followTopic() async {
+        let current = (try? await API.data("topics")).flatMap { data in
+            (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["followed"] as? [String]
+        } ?? []
+        var topics = current
+        if !topics.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) {
+            topics.append(tag)
+        }
+        _ = try? await API.data("topics", method: "PUT", json: ["topics": topics])
+        await MainActor.run { note = "Following #\(tag). Quality mode uses this list." }
     }
 
     private func load() async {
