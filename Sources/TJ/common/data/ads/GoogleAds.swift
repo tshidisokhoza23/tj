@@ -5,15 +5,18 @@ import UIKit
 import GoogleMobileAds
 #endif
 
-// Real iOS ads start after these Info.plist keys contain the iOS AdMob token:
-// GADApplicationIdentifier, TJAdBannerUnit, TJAdNativeUnit, TJAdRewardedUnit.
+// The linked Google SDK aborts at launch unless GADApplicationIdentifier is set.
+// Info.plist keeps Google's sample app id so startup succeeds. Real requests wait
+// until TJAdBannerUnit, TJAdNativeUnit, and TJAdRewardedUnit hold the iOS token.
 enum AdConfig {
+    private static let sampleAppId = "ca-app-pub-3940256099942544~1458002511"
     static var appId: String { value("GADApplicationIdentifier") }
     static var bannerUnit: String? { unit("TJAdBannerUnit") }
     static var nativeUnit: String? { unit("TJAdNativeUnit") }
     static var rewardedUnit: String? { unit("TJAdRewardedUnit") }
     static var isConfigured: Bool {
-        appId.contains("ca-app-pub-") && nativeUnit != nil
+        let id = appId
+        return id.contains("ca-app-pub-") && id != sampleAppId && nativeUnit != nil
     }
 
     private static func unit(_ key: String) -> String? {

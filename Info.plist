@@ -29,6 +29,8 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
 	<key>GIDClientID</key>
 	<string>303703683011-6ksjg0b8uakesl9a821ri05tokrg41f2.apps.googleusercontent.com</string>
 	<key>GIDServerClientID</key>
