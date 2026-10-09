@@ -1341,6 +1341,19 @@ struct CreatePostSheet: View {
     var onPost: (String, [String], String, [String: Any]) -> Void
     @Environment(\.dismiss) private var dismiss
 
+    init(replyToPost: FeedPost? = nil, quotingPost: FeedPost? = nil, onPost: @escaping (String, [String]) -> Void) {
+        self.replyToPost = replyToPost
+        self.quotingPost = quotingPost
+        self.onPost = { text, media, _, _ in onPost(text, media) }
+    }
+
+    init(replyToPost: FeedPost? = nil, quotingPost: FeedPost? = nil, onPost: @escaping (String, [String], String, [String: Any]) -> Void) {
+        self.replyToPost = replyToPost
+        self.quotingPost = quotingPost
+        self.onPost = onPost
+    }
+
+
     @State private var postText = ""
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var loadedData: [Data] = []
@@ -1382,293 +1395,30 @@ struct CreatePostSheet: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        // Replying To Banner
-                        if let replyToPost {
-                            HStack(spacing: 4) {
-                                Text("Replying to")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.secondary)
-                                Text("@\(replyToPost.authorHandle.isEmpty ? "user" : replyToPost.authorHandle)")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                            }
-                        }
-
-                        // User Avatar & Text Editor
-                        HStack(alignment: .top, spacing: 12) {
-                            ZStack {
-                                Circle()
-                                    .trim(from: 0, to: min(CGFloat(postText.count) / CGFloat(charLimit), 1))
-                                    .stroke(Color(red: 0.114, green: 0.608, blue: 0.941), style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                                    .rotationEffect(.degrees(-90))
-                                    .frame(width: 46, height: 46)
-                                Circle()
-                                    .fill(Color.appPrimary)
-                                    .frame(width: 42, height: 42)
-                                    .overlay(Image(systemName: "person.fill").foregroundColor(.white))
-                            }
-
-                            TextField(
-                                replyToPost != nil ? "Post your reply" : "What's happening? Add #hashtags",
-                                text: $postText,
-                                axis: .vertical
-                            )
-                            .font(.system(size: 18))
-                            .lineSpacing(4)
-                            .frame(minHeight: 100, alignment: .topLeading)
-                        }
-
-                        // Location Badge
-                        if let selectedLocation {
-                            HStack(spacing: 6) {
-                                Image(systemName: "mappin.and.ellipse")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                                Text(selectedLocation)
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                                Button {
-                                    self.selectedLocation = nil
-                                } label: {
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                                }
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color(red: 0.114, green: 0.608, blue: 0.941).opacity(0.12))
-                            .clipShape(Capsule())
-                        }
-
-                        // Poll Creator Options
-                        if showPoll {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("Poll Options")
-                                    .font(.system(size: 14, weight: .bold))
-
-                                ForEach(pollOptions.indices, id: \.self) { idx in
-                                    TextField("Choice \(idx + 1)", text: $pollOptions[idx])
-                                        .textFieldStyle(.roundedBorder)
-                                }
-
-                                if pollOptions.count < 4 {
-                                    Button("+ Add Choice") {
-                                        pollOptions.append("")
-                                    }
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                                }
-                            }
-                            .padding(12)
-                            .background(Color(UIColor.secondarySystemBackground))
-                            .cornerRadius(12)
-                        }
-
-                        // Attached Photo Thumbnails Row with Remove (X) Overlay
-                        if !loadedData.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(loadedData.indices, id: \.self) { idx in
-                                        ZStack(alignment: .topTrailing) {
-                                            if let uiImage = UIImage(data: loadedData[idx]) {
-                                                Image(uiImage: uiImage)
-                                                    .resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: 130, height: 130)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                            }
-                                            Button {
-                                                loadedData.remove(at: idx)
-                                                if selectedPhotos.indices.contains(idx) {
-                                                    selectedPhotos.remove(at: idx)
-                                                }
-                                            } label: {
-                                                Image(systemName: "xmark")
-                                                    .font(.system(size: 12, weight: .bold))
-                                                    .foregroundColor(.white)
-                                                    .frame(width: 24, height: 24)
-                                                    .background(Color.black.opacity(0.6))
-                                                    .clipShape(Circle())
-                                            }
-                                            .padding(6)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Quoted Post Card Preview
-                        if let quotingPost {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack(spacing: 6) {
-                                    Text(quotingPost.title)
-                                        .font(.system(size: 14, weight: .bold))
-                                    if !quotingPost.authorHandle.isEmpty {
-                                        Text("@\(quotingPost.authorHandle)")
-                                            .font(.system(size: 13))
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                                if !quotingPost.content.isEmpty {
-                                    Text(quotingPost.content)
-                                        .font(.system(size: 13))
-                                        .lineLimit(3)
-                                }
-                            }
-                            .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color(UIColor.secondarySystemBackground))
-                            .cornerRadius(12)
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.3), lineWidth: 1))
-                        }
-
-                        if !draftLabel.isEmpty {
-                            Text(draftLabel).font(.system(size: 12)).foregroundColor(.secondary)
-                        }
-                        if !mood.isEmpty {
-                            Text(mood).font(.system(size: 13, weight: .semibold)).foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                        }
-                        if !collaborators.isEmpty {
-                            Text("With " + collaborators.map(\.name).joined(separator: ", "))
-                                .font(.system(size: 12)).foregroundColor(.secondary)
-                        }
-                        if scheduledAt != nil {
-                            Text("Scheduled for one hour from now").font(.system(size: 12)).foregroundColor(.secondary)
-                        }
-                        if !note.isEmpty {
-                            Text(note)
-                                .font(.system(size: 12))
-                                .foregroundColor(.red)
-                        }
-                    }
-                    .padding(16)
-                }
-
+                ScrollView { composerFields.padding(16) }
                 Divider()
-
-                // Reply Scope & Media Action Bar
-                VStack(spacing: 8) {
-                    Button { showAudience = true } label: {
-                        HStack {
-                            Image(systemName: "globe")
-                                .font(.system(size: 13))
-                            Text(audience == "followers" ? "Followers only" : (audience == "circle" ? "Circle" : "Public"))
-                                .font(.system(size: 13, weight: .semibold))
-                            Spacer()
-                        }
-                        .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-
-                    HStack {
-                        PhotosPicker(
-                            selection: $selectedPhotos,
-                            maxSelectionCount: 4,
-                            matching: .any(of: [.images, .videos])
-                        ) {
-                            Image(systemName: "photo.on.rectangle")
-                                .font(.system(size: 20))
-                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                                .frame(width: 36, height: 36)
-                        }
-                        .disabled(loadedData.count >= 4)
-
-                        Button {
-                            showPoll.toggle()
-                            if showPoll { loadedData.removeAll() }
-                        } label: {
-                            Image(systemName: "chart.bar.doc.horizontal")
-                                .font(.system(size: 20))
-                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                                .frame(width: 36, height: 36)
-                        }
-
-                        Button {
-                            showAiAssist = true
-                        } label: {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 20))
-                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                                .frame(width: 36, height: 36)
-                        }
-
-                        Button { showLocation = true } label: {
-                            Image(systemName: "mappin.and.ellipse")
-                                .font(.system(size: 20))
-                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                                .frame(width: 36, height: 36)
-                        }
-                        Button { showMood = true } label: {
-                            Image(systemName: "face.smiling")
-                                .font(.system(size: 20))
-                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                                .frame(width: 36, height: 36)
-                        }
-                        Button {
-                            scheduledAt = scheduledAt == nil ? Int64(Date().addingTimeInterval(3600).timeIntervalSince1970 * 1000) : nil
-                        } label: {
-                            Image(systemName: "clock")
-                                .font(.system(size: 20))
-                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                                .frame(width: 36, height: 36)
-                        }
-                        Button { showCollaborators = true } label: {
-                            Image(systemName: "person.2")
-                                .font(.system(size: 20))
-                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                                .frame(width: 36, height: 36)
-                        }
-                        Button { toggleVoice() } label: {
-                            Image(systemName: recording ? "stop.circle" : "mic")
-                                .font(.system(size: 20))
-                                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
-                                .frame(width: 36, height: 36)
-                        }
-
-                        Spacer()
-
-                        let remaining = charLimit - postText.count
-                        Text("\(remaining)")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(remaining < 0 ? .red : .secondary)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 8)
-                }
-                .background(Color(UIColor.secondarySystemBackground))
+                composerBar
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.primary)
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark").font(.system(size: 16, weight: .bold)).foregroundColor(.primary)
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(replyToPost != nil ? "Reply" : "Post") {
-                        Task { await publish() }
-                    }
-                    .font(.system(size: 14, weight: .bold))
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 7)
-                    .background(canPost && !isPosting ? Color(red: 0.114, green: 0.608, blue: 0.941) : Color(red: 0.114, green: 0.608, blue: 0.941).opacity(0.4))
-                    .foregroundColor(.white)
-                    .clipShape(Capsule())
-                    .disabled(!canPost || isPosting)
+                    Button(replyToPost != nil ? "Reply" : "Post") { Task { await publish() } }
+                        .font(.system(size: 14, weight: .bold))
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 7)
+                        .background(canPost && !isPosting ? Color(red: 0.114, green: 0.608, blue: 0.941) : Color.gray.opacity(0.4))
+                        .foregroundColor(.white)
+                        .clipShape(Capsule())
+                        .disabled(!canPost || isPosting)
                 }
             }
-            .onChange(of: selectedPhotos) { _ in
-                Task { await loadSelectedPhotos(selectedPhotos) }
-            }
+            .onChange(of: selectedPhotos) { _ in Task { await loadSelectedPhotos(selectedPhotos) } }
             .sheet(isPresented: $showAiAssist) {
                 AiAssistSheetView(initialText: postText) { text, _ in
                     postText = String(text.prefix(charLimit))
@@ -1684,9 +1434,11 @@ struct CreatePostSheet: View {
                 Button("Cancel", role: .cancel) {}
             }
             .confirmationDialog("Mood", isPresented: $showMood, titleVisibility: .visible) {
-                ForEach(["Feeling creative", "Hot take", "Question", "Excited", "Grateful"], id: \.self) { item in
-                    Button(item) { mood = item }
-                }
+                Button("Feeling creative") { mood = "Feeling creative" }
+                Button("Hot take") { mood = "Hot take" }
+                Button("Question") { mood = "Question" }
+                Button("Excited") { mood = "Excited" }
+                Button("Grateful") { mood = "Grateful" }
                 Button("Clear", role: .destructive) { mood = "" }
                 Button("Cancel", role: .cancel) {}
             }
@@ -1700,19 +1452,275 @@ struct CreatePostSheet: View {
                 Button("Search") { Task { await searchPeople() } }
                 Button("Done", role: .cancel) {}
             } message: {
-                Text(people.isEmpty ? collaborators.map(\.name).joined(separator: ", ") : people.map(\.name).joined(separator: ", "))
+                Text(people.isEmpty ? "Search by name" : people.map(\.name).joined(separator: ", "))
             }
-            .task {
-                await loadDraft()
-                await loadCircles()
+            .task { await loadDraft(); await loadCircles() }
+            .onChange(of: postText) { _ in Task { try? await Task.sleep(nanoseconds: 800_000_000); await saveDraft() } }
+        }
+    }
+
+    @ViewBuilder
+    private var composerFields: some View {
+ScrollView {
+    VStack(alignment: .leading, spacing: 12) {
+        // Replying To Banner
+        if let replyToPost {
+            HStack(spacing: 4) {
+                Text("Replying to")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                Text("@\(replyToPost.authorHandle.isEmpty ? "user" : replyToPost.authorHandle)")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
             }
-            .onChange(of: postText) { _ in
-                Task {
-                    try? await Task.sleep(nanoseconds: 800_000_000)
-                    await saveDraft()
+        }
+
+        // User Avatar & Text Editor
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .trim(from: 0, to: min(CGFloat(postText.count) / CGFloat(charLimit), 1))
+                    .stroke(Color(red: 0.114, green: 0.608, blue: 0.941), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 46, height: 46)
+                Circle()
+                    .fill(Color.appPrimary)
+                    .frame(width: 42, height: 42)
+                    .overlay(Image(systemName: "person.fill").foregroundColor(.white))
+            }
+
+            TextField(
+                replyToPost != nil ? "Post your reply" : "What's happening? Add #hashtags",
+                text: $postText,
+                axis: .vertical
+            )
+            .font(.system(size: 18))
+            .lineSpacing(4)
+            .frame(minHeight: 100, alignment: .topLeading)
+        }
+
+        // Location Badge
+        if let selectedLocation {
+            HStack(spacing: 6) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                Text(selectedLocation)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                Button {
+                    self.selectedLocation = nil
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color(red: 0.114, green: 0.608, blue: 0.941).opacity(0.12))
+            .clipShape(Capsule())
+        }
+
+        // Poll Creator Options
+        if showPoll {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Poll Options")
+                    .font(.system(size: 14, weight: .bold))
+
+                ForEach(pollOptions.indices, id: \.self) { idx in
+                    TextField("Choice \(idx + 1)", text: $pollOptions[idx])
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                if pollOptions.count < 4 {
+                    Button("+ Add Choice") {
+                        pollOptions.append("")
+                    }
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                }
+            }
+            .padding(12)
+            .background(Color(UIColor.secondarySystemBackground))
+            .cornerRadius(12)
+        }
+
+        // Attached Photo Thumbnails Row with Remove (X) Overlay
+        if !loadedData.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(loadedData.indices, id: \.self) { idx in
+                        ZStack(alignment: .topTrailing) {
+                            if let uiImage = UIImage(data: loadedData[idx]) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 130, height: 130)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            Button {
+                                loadedData.remove(at: idx)
+                                if selectedPhotos.indices.contains(idx) {
+                                    selectedPhotos.remove(at: idx)
+                                }
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 24, height: 24)
+                                    .background(Color.black.opacity(0.6))
+                                    .clipShape(Circle())
+                            }
+                            .padding(6)
+                        }
+                    }
                 }
             }
         }
+
+        // Quoted Post Card Preview
+        if let quotingPost {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Text(quotingPost.title)
+                        .font(.system(size: 14, weight: .bold))
+                    if !quotingPost.authorHandle.isEmpty {
+                        Text("@\(quotingPost.authorHandle)")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                if !quotingPost.content.isEmpty {
+                    Text(quotingPost.content)
+                        .font(.system(size: 13))
+                        .lineLimit(3)
+                }
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(UIColor.secondarySystemBackground))
+            .cornerRadius(12)
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.3), lineWidth: 1))
+        }
+
+        if !draftLabel.isEmpty {
+            Text(draftLabel).font(.system(size: 12)).foregroundColor(.secondary)
+        }
+        if !mood.isEmpty {
+            Text(mood).font(.system(size: 13, weight: .semibold)).foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+        }
+        if !collaborators.isEmpty {
+            Text("With " + collaborators.map(\.name).joined(separator: ", "))
+                .font(.system(size: 12)).foregroundColor(.secondary)
+        }
+        if scheduledAt != nil {
+            Text("Scheduled for one hour from now").font(.system(size: 12)).foregroundColor(.secondary)
+        }
+        if !note.isEmpty {
+            Text(note)
+                .font(.system(size: 12))
+                .foregroundColor(.red)
+        }
+    }
+    .padding(16)
+}
+
+    }
+
+    @ViewBuilder
+    private var composerBar: some View {
+// Reply Scope & Media Action Bar
+VStack(spacing: 8) {
+    Button { showAudience = true } label: {
+        HStack {
+            Image(systemName: "globe")
+                .font(.system(size: 13))
+            Text(audience == "followers" ? "Followers only" : (audience == "circle" ? "Circle" : "Public"))
+                .font(.system(size: 13, weight: .semibold))
+            Spacer()
+        }
+        .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+    }
+    .padding(.horizontal, 16)
+    .padding(.top, 8)
+
+    HStack {
+        PhotosPicker(
+            selection: $selectedPhotos,
+            maxSelectionCount: 4,
+            matching: .any(of: [.images, .videos])
+        ) {
+            Image(systemName: "photo.on.rectangle")
+                .font(.system(size: 20))
+                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                .frame(width: 36, height: 36)
+        }
+        .disabled(loadedData.count >= 4)
+
+        Button {
+            showPoll.toggle()
+            if showPoll { loadedData.removeAll() }
+        } label: {
+            Image(systemName: "chart.bar.doc.horizontal")
+                .font(.system(size: 20))
+                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                .frame(width: 36, height: 36)
+        }
+
+        Button {
+            showAiAssist = true
+        } label: {
+            Image(systemName: "sparkles")
+                .font(.system(size: 20))
+                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                .frame(width: 36, height: 36)
+        }
+
+        Button { showLocation = true } label: {
+            Image(systemName: "mappin.and.ellipse")
+                .font(.system(size: 20))
+                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                .frame(width: 36, height: 36)
+        }
+        Button { showMood = true } label: {
+            Image(systemName: "face.smiling")
+                .font(.system(size: 20))
+                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                .frame(width: 36, height: 36)
+        }
+        Button {
+            scheduledAt = scheduledAt == nil ? Int64(Date().addingTimeInterval(3600).timeIntervalSince1970 * 1000) : nil
+        } label: {
+            Image(systemName: "clock")
+                .font(.system(size: 20))
+                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                .frame(width: 36, height: 36)
+        }
+        Button { showCollaborators = true } label: {
+            Image(systemName: "person.2")
+                .font(.system(size: 20))
+                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                .frame(width: 36, height: 36)
+        }
+        Button { toggleVoice() } label: {
+            Image(systemName: recording ? "stop.circle" : "mic")
+                .font(.system(size: 20))
+                .foregroundColor(Color(red: 0.114, green: 0.608, blue: 0.941))
+                .frame(width: 36, height: 36)
+        }
+
+        Spacer()
+
+        let remaining = charLimit - postText.count
+        Text("\(remaining)")
+            .font(.system(size: 13, weight: .medium))
+            .foregroundColor(remaining < 0 ? .red : .secondary)
+    }
+    .padding(.horizontal, 12)
+    .padding(.bottom, 8)
+}
+.background(Color(UIColor.secondarySystemBackground))
     }
 
     private func loadDraft() async {

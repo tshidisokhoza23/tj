@@ -20,229 +20,7 @@ public struct CreatorDashboardView: View {
     public var body: some View {
         NavigationView {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Header Range Selector
-                    if !note.isEmpty {
-                        Text(note)
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                            .padding(.horizontal)
-                    }
-                    if !posts.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("YOUR POSTS")
-                                .font(.caption2)
-                                .fontWeight(.bold)
-                                .foregroundColor(AppColors.tealAccent)
-                            ForEach(Array(posts.enumerated()), id: \.offset) { _, post in
-                                Text("\(post.1) views · \(post.2) likes · \(post.0.isEmpty ? "Post" : post.0)")
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    HStack {
-                        Text("OVERVIEW")
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppColors.tealAccent)
-
-                        Spacer()
-
-                        HStack(spacing: 6) {
-                            ForEach(["7D", "30D", "All"], id: \.self) { range in
-                                let isSel = timeRange == range
-                                Button(action: {
-                                    timeRange = range
-                                    Task { await loadDashboard() }
-                                }) {
-                                    Text(range)
-                                        .font(.caption)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(isSel ? AppColors.tealAccent : .white)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 4)
-                                        .background(isSel ? AppColors.tealAccent.opacity(0.2) : AppColors.cardDark)
-                                        .cornerRadius(12)
-                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(isSel ? AppColors.tealAccent : AppColors.borderDark, lineWidth: 1))
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-
-                    // 2x2 Overview Cards
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("This Month")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            Text(monthEarnings)
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                            Text("All time: \(allEarnings)")
-                                .font(.caption2)
-                                .foregroundColor(AppColors.tealAccent)
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(AppColors.cardDark)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Tips Received")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            Text(tipsAmount)
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                            Text("\(tipsCount) tips total")
-                                .font(.caption2)
-                                .fontWeight(.bold)
-                                .foregroundColor(AppColors.purpleAccent)
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(AppColors.cardDark)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Post views")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            Text("\(postViews)")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(AppColors.cardDark)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("New Followers")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            Text("+\(newFollowers)")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(AppColors.cardDark)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
-                    }
-                    .padding(.horizontal)
-
-                    // Artist Tools & Commission Requests
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("ARTIST TOOLS & COMMISSIONS")
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppColors.tealAccent)
-
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text("Commission Requests Inbox")
-                                    .font(.headline)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                Spacer()
-                                Text("0 Pending")
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(AppColors.tealAccent)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(AppColors.tealAccent.opacity(0.2))
-                                    .cornerRadius(10)
-                            }
-
-                            Divider().background(AppColors.borderDark)
-
-                            Text("No commission requests. This inbox stays empty until someone sends a real request.")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                        .padding()
-                        .background(AppColors.cardDark)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
-
-                        // Active Commissions Tracker
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Active Commissions Tracker")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-
-                            Text("No active commissions.")
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                        }
-                        .padding()
-                        .background(AppColors.cardDark)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
-                    }
-                    .padding(.horizontal)
-
-                    // Monetization Controls
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("MONETIZATION CONTROLS")
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppColors.tealAccent)
-
-                        VStack(spacing: 12) {
-                            Toggle("Accept Tips on Posts", isOn: $acceptTips)
-                                .foregroundColor(.white)
-                                .tint(AppColors.tealAccent)
-
-                            Divider().background(AppColors.borderDark)
-
-                            Toggle("Accept Commissions", isOn: $acceptCommissions)
-                                .foregroundColor(.white)
-                                .tint(AppColors.tealAccent)
-
-                            HStack(spacing: 12) {
-                                Button(action: {}) {
-                                    Text("Set Prices")
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(AppColors.tealAccent)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 8)
-                                        .overlay(Capsule().stroke(AppColors.tealAccent, lineWidth: 1))
-                                }
-                                Button(action: {}) {
-                                    Text("Payout Settings")
-                                        .font(.subheadline)
-                                        .foregroundColor(.white)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 8)
-                                        .overlay(Capsule().stroke(Color.gray, lineWidth: 1))
-                                }
-                            }
-                            .padding(.top, 8)
-                        }
-                        .padding()
-                        .background(AppColors.cardDark)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
-                    }
-                    .padding(.horizontal)
-                }
-                .padding(.top)
+                dashboardContent
             }
             .background(AppColors.darkCharcoal.ignoresSafeArea())
             .navigationTitle("Creator Dashboard")
@@ -253,12 +31,251 @@ public struct CreatorDashboardView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { dismiss() }) {
-                        Image(systemName: "arrow.left")
-                            .foregroundColor(.white)
+                        Image(systemName: "arrow.left").foregroundColor(.white)
                     }
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private var dashboardContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            overviewSection
+            toolsSection
+            monetizationSection
+        }
+        .padding(.top)
+    }
+
+    @ViewBuilder
+    private var overviewSection: some View {
+    // Header Range Selector
+    if !note.isEmpty {
+        Text(note)
+            .font(.caption)
+            .foregroundColor(.gray)
+            .padding(.horizontal)
+    }
+    if !posts.isEmpty {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("YOUR POSTS")
+                .font(.caption2)
+                .fontWeight(.bold)
+                .foregroundColor(AppColors.tealAccent)
+            ForEach(Array(posts.enumerated()), id: \.offset) { _, post in
+                Text("\(post.1) views · \(post.2) likes · \(post.0.isEmpty ? "Post" : post.0)")
+                    .font(.caption)
+                    .foregroundColor(.white)
+            }
+        }
+        .padding(.horizontal)
+    }
+    HStack {
+        Text("OVERVIEW")
+            .font(.caption2)
+            .fontWeight(.bold)
+            .foregroundColor(AppColors.tealAccent)
+
+        Spacer()
+
+        HStack(spacing: 6) {
+            ForEach(["7D", "30D", "All"], id: \.self) { range in
+                let isSel = timeRange == range
+                Button(action: {
+                    timeRange = range
+                    Task { await loadDashboard() }
+                }) {
+                    Text(range)
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(isSel ? AppColors.tealAccent : .white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(isSel ? AppColors.tealAccent.opacity(0.2) : AppColors.cardDark)
+                        .cornerRadius(12)
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(isSel ? AppColors.tealAccent : AppColors.borderDark, lineWidth: 1))
+                }
+            }
+        }
+    }
+    .padding(.horizontal)
+
+    // 2x2 Overview Cards
+    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("This Month")
+                .font(.caption)
+                .foregroundColor(.gray)
+            Text(monthEarnings)
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            Text("All time: \(allEarnings)")
+                .font(.caption2)
+                .foregroundColor(AppColors.tealAccent)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.cardDark)
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
+
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Tips Received")
+                .font(.caption)
+                .foregroundColor(.gray)
+            Text(tipsAmount)
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            Text("\(tipsCount) tips total")
+                .font(.caption2)
+                .fontWeight(.bold)
+                .foregroundColor(AppColors.purpleAccent)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.cardDark)
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
+
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Post views")
+                .font(.caption)
+                .foregroundColor(.gray)
+            Text("\(postViews)")
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.cardDark)
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
+
+        VStack(alignment: .leading, spacing: 6) {
+            Text("New Followers")
+                .font(.caption)
+                .foregroundColor(.gray)
+            Text("+\(newFollowers)")
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.cardDark)
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
+    }
+    .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private var toolsSection: some View {
+    // Artist Tools & Commission Requests
+    VStack(alignment: .leading, spacing: 12) {
+        Text("ARTIST TOOLS & COMMISSIONS")
+            .font(.caption2)
+            .fontWeight(.bold)
+            .foregroundColor(AppColors.tealAccent)
+
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Commission Requests Inbox")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                Spacer()
+                Text("0 Pending")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(AppColors.tealAccent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(AppColors.tealAccent.opacity(0.2))
+                    .cornerRadius(10)
+            }
+
+            Divider().background(AppColors.borderDark)
+
+            Text("No commission requests. This inbox stays empty until someone sends a real request.")
+                .font(.caption)
+                .foregroundColor(.gray)
+        }
+        .padding()
+        .background(AppColors.cardDark)
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
+
+        // Active Commissions Tracker
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Active Commissions Tracker")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+
+            Text("No active commissions.")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+        }
+        .padding()
+        .background(AppColors.cardDark)
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
+    }
+    .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private var monetizationSection: some View {
+    // Monetization Controls
+    VStack(alignment: .leading, spacing: 12) {
+        Text("MONETIZATION CONTROLS")
+            .font(.caption2)
+            .fontWeight(.bold)
+            .foregroundColor(AppColors.tealAccent)
+
+        VStack(spacing: 12) {
+            Toggle("Accept Tips on Posts", isOn: $acceptTips)
+                .foregroundColor(.white)
+                .tint(AppColors.tealAccent)
+
+            Divider().background(AppColors.borderDark)
+
+            Toggle("Accept Commissions", isOn: $acceptCommissions)
+                .foregroundColor(.white)
+                .tint(AppColors.tealAccent)
+
+            HStack(spacing: 12) {
+                Button(action: {}) {
+                    Text("Set Prices")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(AppColors.tealAccent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .overlay(Capsule().stroke(AppColors.tealAccent, lineWidth: 1))
+                }
+                Button(action: {}) {
+                    Text("Payout Settings")
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .overlay(Capsule().stroke(Color.gray, lineWidth: 1))
+                }
+            }
+            .padding(.top, 8)
+        }
+        .padding()
+        .background(AppColors.cardDark)
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
+    }
+    .padding(.horizontal)
     }
 
     private func loadDashboard() async {
