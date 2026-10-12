@@ -63,7 +63,7 @@ public class JobViewModel: ObservableObject {
                 fetchJobs()
                 return
             }
-            for await result in repository.searchJobs(query: query, category: category) {
+            for await result in repository.searchJobs(query: query, location: location.isEmpty ? nil : location, salaryMin: Double(salaryMin), jobType: nil, featuredOnly: false, postedWithinDays: postedWithinDays > 0 ? postedWithinDays : nil, category: category) {
                 self.jobs = result
             }
         }
