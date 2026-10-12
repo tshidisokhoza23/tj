@@ -27,18 +27,7 @@ public struct CirclesView: View {
     public var body: some View {
         NavigationView {
             VStack(alignment: .leading, spacing: 16) {
-                // Search Field
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(AppColors.tealAccent)
-                    TextField("Search circles...", text: $searchText)
-                        .foregroundColor(.white)
-                }
-                .padding()
-                .background(AppColors.cardDark)
-                .cornerRadius(16)
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
-                .padding(.horizontal)
+                searchHeaderView
 
                 if !status.isEmpty {
                     Text(status)
@@ -56,50 +45,7 @@ public struct CirclesView: View {
                 ScrollView {
                     VStack(spacing: 12) {
                         ForEach(circles) { circle in
-                            HStack(spacing: 16) {
-                                Circle()
-                                    .fill(AppColors.purpleAccent.opacity(0.2))
-                                    .frame(width: 48, height: 48)
-                                    .overlay(
-                                        Image(systemName: "person.3.fill")
-                                            .foregroundColor(AppColors.tealAccent)
-                                    )
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
-                                        Text(circle.name)
-                                            .font(.headline)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.white)
-
-                                        if circle.isTemporary {
-                                            Text("Temporary")
-                                                .font(.caption2)
-                                                .fontWeight(.bold)
-                                                .foregroundColor(AppColors.waitlistOrange)
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 2)
-                                                .background(AppColors.waitlistOrange.opacity(0.2))
-                                                .cornerRadius(6)
-                                        }
-                                    }
-
-                                    Text("\(circle.memberCount) members")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                }
-
-                                Spacer()
-
-                                Button(action: {}) {
-                                    Image(systemName: "ellipsis")
-                                        .foregroundColor(.gray)
-                                }
-                            }
-                            .padding()
-                            .background(AppColors.cardDark)
-                            .cornerRadius(16)
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
+                            circleRow(circle)
                         }
                     }
                     .padding(.horizontal)
@@ -107,22 +53,7 @@ public struct CirclesView: View {
 
                 Spacer()
 
-                // Create New Circle Floating Button
-                Button(action: { showCreateDialog = true }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "plus")
-                        Text("Create New Circle")
-                    }
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(AppColors.primaryGradient)
-                    .clipShape(Capsule())
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+                createButtonView
             }
             .background(AppColors.darkCharcoal.ignoresSafeArea())
             .navigationTitle("Circles")
@@ -147,6 +78,85 @@ public struct CirclesView: View {
                 Button("Cancel", role: .cancel) { }
             }
         }
+    }
+
+    private var searchHeaderView: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(AppColors.tealAccent)
+            TextField("Search circles...", text: $searchText)
+                .foregroundColor(.white)
+        }
+        .padding()
+        .background(AppColors.cardDark)
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
+        .padding(.horizontal)
+    }
+
+    private var createButtonView: some View {
+        Button(action: { showCreateDialog = true }) {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                Text("Create New Circle")
+            }
+            .font(.headline)
+            .fontWeight(.bold)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(AppColors.primaryGradient)
+            .clipShape(Capsule())
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 8)
+    }
+
+    private func circleRow(_ circle: CircleItemModel) -> some View {
+        HStack(spacing: 16) {
+            Circle()
+                .fill(AppColors.purpleAccent.opacity(0.2))
+                .frame(width: 48, height: 48)
+                .overlay(
+                    Image(systemName: "person.3.fill")
+                        .foregroundColor(AppColors.tealAccent)
+                )
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(circle.name)
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+
+                    if circle.isTemporary {
+                        Text("Temporary")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundColor(AppColors.waitlistOrange)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(AppColors.waitlistOrange.opacity(0.2))
+                            .cornerRadius(6)
+                    }
+                }
+
+                Text("\(circle.memberCount) members")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+            }
+
+            Spacer()
+
+            Button(action: {}) {
+                Image(systemName: "ellipsis")
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding()
+        .background(AppColors.cardDark)
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
     }
 
     private func loadCircles() async {

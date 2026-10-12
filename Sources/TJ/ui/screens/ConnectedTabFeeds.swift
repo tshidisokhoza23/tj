@@ -1431,7 +1431,9 @@ struct CreatePostSheet: View {
         let textValid = !postText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let mediaValid = !loadedData.isEmpty || !uploadedURLs.isEmpty
         let pollValid = showPoll && pollOptions.contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        return (textValid || mediaValid || pollValid) && postText.count <= charLimit
+        let hasContent = textValid || mediaValid || pollValid
+        let withinLimit = postText.count <= charLimit
+        return hasContent && withinLimit
     }
 
     var body: some View {
