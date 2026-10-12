@@ -1,40 +1,199 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 public enum AppColors {
-    public static let brandPrimary = Color(red: 0.04, green: 0.34, blue: 0.82) // #0B57D0 Royal Blue
-    public static let brandAccent = Color(red: 0.01, green: 0.52, blue: 0.78)  // #0284C7 Sky Accent
-    public static let tealAccent = Color(red: 0.08, green: 0.72, blue: 0.65)   // #14B8A6
-    public static let darkCharcoal = Color(red: 0.12, green: 0.13, blue: 0.16)
-    public static let cardDark = Color(red: 0.16, green: 0.17, blue: 0.20)
-    public static let borderDark = Color(red: 0.24, green: 0.25, blue: 0.28)
-    public static let surfaceElevated = Color(red: 0.18, green: 0.19, blue: 0.22)
+    // --- Dynamic Light vs Dark Mode Theme Palette ---
 
-    // Bottom Nav Palette (Exact match to screenshot)
-    public static let appBottomNavBg = Color(red: 0.91, green: 0.93, blue: 0.98)   // #E8EEF9
-    public static let appBottomNavPill = Color(red: 0.82, green: 0.89, blue: 0.99) // #D3E3FD
-    public static let appBottomNavActive = Color(red: 0.04, green: 0.34, blue: 0.82) // #0B57D0
-    public static let appBottomNavUnselected = Color(red: 0.27, green: 0.28, blue: 0.27) // #444746
+    public static var brandPrimary: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.0, green: 0.82, blue: 0.76, alpha: 1.0) : // Electric Cyan-Teal #00D2C2 (Dark)
+                UIColor(red: 0.04, green: 0.34, blue: 0.82, alpha: 1.0)  // Royal Blue #0B57D0 (Light)
+        })
+        #else
+        return Color(red: 0.04, green: 0.34, blue: 0.82)
+        #endif
+    }
 
-    public static let darkBackgroundTop = Color(red: 0.07, green: 0.07, blue: 0.09)
-    public static let darkBackgroundBottom = Color(red: 0.04, green: 0.05, blue: 0.07)
-    public static let greyMedium = Color(red: 0.45, green: 0.47, blue: 0.46)
-    public static let greyLight = Color(red: 0.95, green: 0.96, blue: 0.97)
+    public static var brandAccent: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.55, green: 0.36, blue: 0.96, alpha: 1.0) : // Purple #8B5CF6 (Dark)
+                UIColor(red: 0.01, green: 0.52, blue: 0.78, alpha: 1.0)  // Sky Accent #0284C7 (Light)
+        })
+        #else
+        return Color(red: 0.01, green: 0.52, blue: 0.78)
+        #endif
+    }
 
-    public static let primaryGradient = LinearGradient(
-        colors: [brandPrimary, brandAccent],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    public static let tealAccent = Color(red: 0.0, green: 0.82, blue: 0.76)
+
+    public static var cardDark: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.12, green: 0.13, blue: 0.15, alpha: 1.0) : // #1E2026 (Dark)
+                UIColor(red: 0.95, green: 0.96, blue: 0.98, alpha: 1.0)  // #F2F4F8 (Light)
+        })
+        #else
+        return Color(red: 0.95, green: 0.96, blue: 0.98)
+        #endif
+    }
+
+    public static var darkCharcoal: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1.0) : // #121316 (Dark)
+                UIColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)  // #FAFAFD (Light)
+        })
+        #else
+        return Color(red: 0.07, green: 0.07, blue: 0.09)
+        #endif
+    }
+
+    public static var borderDark: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.16, green: 0.17, blue: 0.20, alpha: 1.0) : // #2A2C34 (Dark)
+                UIColor(red: 0.88, green: 0.88, blue: 0.90, alpha: 1.0)  // #E0E0E0 (Light)
+        })
+        #else
+        return Color(red: 0.88, green: 0.88, blue: 0.90)
+        #endif
+    }
+
+    public static var surfaceElevated: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.12, green: 0.13, blue: 0.15, alpha: 1.0) : // #1E2026 (Dark)
+                UIColor(red: 0.95, green: 0.96, blue: 0.98, alpha: 1.0)  // #F2F4F8 (Light)
+        })
+        #else
+        return Color(red: 0.95, green: 0.96, blue: 0.98)
+        #endif
+    }
+
+    // Bottom Nav Palette
+    public static var appBottomNavBg: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1.0) : // #121316 (Dark)
+                UIColor(red: 0.91, green: 0.93, blue: 0.98, alpha: 1.0)  // #E8EEF9 (Light)
+        })
+        #else
+        return Color(red: 0.91, green: 0.93, blue: 0.98)
+        #endif
+    }
+
+    public static var appBottomNavPill: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.12, green: 0.17, blue: 0.27, alpha: 1.0) : // #1E2B45 (Dark)
+                UIColor(red: 0.82, green: 0.89, blue: 0.99, alpha: 1.0)  // #D3E3FD (Light)
+        })
+        #else
+        return Color(red: 0.82, green: 0.89, blue: 0.99)
+        #endif
+    }
+
+    public static var appBottomNavActive: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.0, green: 0.82, blue: 0.76, alpha: 1.0) : // #00D2C2 (Dark)
+                UIColor(red: 0.04, green: 0.34, blue: 0.82, alpha: 1.0)  // #0B57D0 (Light)
+        })
+        #else
+        return Color(red: 0.04, green: 0.34, blue: 0.82)
+        #endif
+    }
+
+    public static var appBottomNavUnselected: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.56, green: 0.57, blue: 0.61, alpha: 1.0) : // #8E929B (Dark)
+                UIColor(red: 0.27, green: 0.28, blue: 0.27, alpha: 1.0)  // #444746 (Light)
+        })
+        #else
+        return Color(red: 0.27, green: 0.28, blue: 0.27)
+        #endif
+    }
+
+    public static var darkBackgroundTop: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.07, green: 0.07, blue: 0.09, alpha: 1.0) : // #121316
+                UIColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)
+        })
+        #else
+        return Color(red: 0.07, green: 0.07, blue: 0.09)
+        #endif
+    }
+
+    public static var darkBackgroundBottom: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.04, green: 0.05, blue: 0.07, alpha: 1.0) :
+                UIColor(red: 0.95, green: 0.96, blue: 0.97, alpha: 1.0)
+        })
+        #else
+        return Color(red: 0.04, green: 0.05, blue: 0.07)
+        #endif
+    }
+
+    public static var greyMedium: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.56, green: 0.57, blue: 0.61, alpha: 1.0) :
+                UIColor(red: 0.45, green: 0.47, blue: 0.46, alpha: 1.0)
+        })
+        #else
+        return Color(red: 0.45, green: 0.47, blue: 0.46)
+        #endif
+    }
+
+    public static var greyLight: Color {
+        #if canImport(UIKit)
+        return Color(UIColor { traitCollection in
+            return traitCollection.userInterfaceStyle == .dark ?
+                UIColor(red: 0.12, green: 0.13, blue: 0.15, alpha: 1.0) :
+                UIColor(red: 0.95, green: 0.96, blue: 0.97, alpha: 1.0)
+        })
+        #else
+        return Color(red: 0.95, green: 0.96, blue: 0.97)
+        #endif
+    }
+
+    public static var primaryGradient: LinearGradient {
+        LinearGradient(
+            colors: [brandPrimary, brandAccent],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
 }
 
 public extension Color {
-    static let appPrimary = AppColors.brandPrimary
-    static let appAccent = AppColors.brandAccent
-    static let appBottomNavBg = AppColors.appBottomNavBg
-    static let appBottomNavPill = AppColors.appBottomNavPill
-    static let appBottomNavActive = AppColors.appBottomNavActive
-    static let appBottomNavUnselected = AppColors.appBottomNavUnselected
-    static let logoBlueDark = AppColors.brandPrimary
-    static let appBackgroundDarkTop = AppColors.darkBackgroundTop
-    static let appBackgroundDarkBottom = AppColors.darkBackgroundBottom
+    static var appPrimary: Color { AppColors.brandPrimary }
+    static var appAccent: Color { AppColors.brandAccent }
+    static var appBottomNavBg: Color { AppColors.appBottomNavBg }
+    static var appBottomNavPill: Color { AppColors.appBottomNavPill }
+    static var appBottomNavActive: Color { AppColors.appBottomNavActive }
+    static var appBottomNavUnselected: Color { AppColors.appBottomNavUnselected }
+    static var logoBlueDark: Color { AppColors.brandPrimary }
+    static var appBackgroundDarkTop: Color { AppColors.darkBackgroundTop }
+    static var appBackgroundDarkBottom: Color { AppColors.darkBackgroundBottom }
 }
