@@ -205,6 +205,9 @@ public struct ChatTabView: View {
             viewModel.fetchChats()
             channelsViewModel.fetchChannels()
             jobViewModel.fetchJobs()
+            Task {
+                _ = await ContactSyncManager.shared.syncAccountContacts()
+            }
         }
         .sheet(isPresented: $showTopMenu) {
             TopMoreMenuSheetView(

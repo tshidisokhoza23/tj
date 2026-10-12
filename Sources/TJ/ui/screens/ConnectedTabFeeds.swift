@@ -468,7 +468,7 @@ struct SocialFeedView: View {
 
             // Category Sub-Pills Row matching Screenshot 2
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                HStack(spacing: 8) {
                     ForEach(0..<categories.count, id: \.self) { idx in
                         let isSelected = selectedCategory == idx
                         Button(action: {
@@ -479,9 +479,10 @@ struct SocialFeedView: View {
                             Task { await load(reset: true) }
                         }) {
                             Text(categories[idx].1)
-                                .font(.system(size: 13, weight: .black))
-                                .padding(.horizontal, 18)
-                                .padding(.vertical, 8)
+                                .font(.system(size: 13, weight: .medium))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 4)
+                                .frame(height: 32)
                                 .foregroundColor(isSelected ? .white : AppColors.tealAccent)
                                 .background {
                                     if isSelected {
@@ -490,12 +491,13 @@ struct SocialFeedView: View {
                                         AppColors.surfaceElevated
                                     }
                                 }
-                                .clipShape(Capsule())
+                                .cornerRadius(16)
+                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(isSelected ? Color.clear : AppColors.borderDark, lineWidth: 1))
                         }
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 6)
+                .padding(.vertical, 4)
             }
 
             Menu {

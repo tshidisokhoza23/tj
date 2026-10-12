@@ -13,10 +13,10 @@ git push origin main
 
 ```bash
 # Check GitHub Actions build status:
-gh run list --repo pikasop303-a11y/tj
+gh run list --repo tshidiso.khoza23/tj
 
 # Download the compiled IPA artifact:
-gh run download --repo pikasop303-a11y/tj --name TJ-iOS-App --dir ~/Downloads/
+gh run download --repo pikasop303-a1/tj --name TJ-iOS-App --dir ~/Downloads/
 ```
 
 ## Step 3: Verify the Signed `.ipa` File

@@ -55,19 +55,25 @@ public struct JobsHomeView: View {
                 }
 
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         ForEach(jobCategories, id: \.self) { chip in
                             let selectedChip = viewModel.feedChip == chip
                             Button(chip) { viewModel.selectFeedChip(chip) }
-                                .font(.system(size: 13, weight: .black))
-                                .padding(.horizontal, 18)
-                                .padding(.vertical, 8)
+                                .font(.system(size: 13, weight: .medium))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 4)
+                                .frame(height: 32)
                                 .foregroundColor(selectedChip ? .white : AppColors.tealAccent)
                                 .background {
                                     if selectedChip { AppColors.primaryGradient } else { AppColors.surfaceElevated }
                                 }
-                                .clipShape(Capsule())
+                                .cornerRadius(16)
+                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(selectedChip ? Color.clear : AppColors.borderDark, lineWidth: 1))
                         }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
+                }
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 6)

@@ -75,22 +75,22 @@ public struct CreatePostView: View {
                                 alignment: .topLeading
                             )
 
-                        // Feeling creative pill
+                        // Feeling creative pill (compact)
                         Button(action: { showAiAssistSheet = true }) {
                             Text("Feeling creative ✨")
-                                .font(.caption)
+                                .font(.caption2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(AppColors.tealAccent)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 4)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 3)
                                 .overlay(Capsule().stroke(AppColors.tealAccent, lineWidth: 1))
                         }
                     }
                 }
                 .padding(.horizontal)
 
-                // Template Chips (Horizontal Scroll)
-                VStack(alignment: .leading, spacing: 6) {
+                // Template Chips (Compact 30pt height)
+                VStack(alignment: .leading, spacing: 4) {
                     Text("TEMPLATES")
                         .font(.caption2)
                         .fontWeight(.bold)
@@ -98,7 +98,7 @@ public struct CreatePostView: View {
                         .padding(.horizontal)
 
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             ForEach([
                                 ("🔥 Hot take", "Hot take: "),
                                 ("❓ Question", "Question for community: "),
@@ -111,11 +111,12 @@ public struct CreatePostView: View {
                                     }
                                 }) {
                                     Text(label)
-                                        .font(.caption)
+                                        .font(.caption2)
                                         .fontWeight(.medium)
                                         .foregroundColor(AppColors.tealAccent)
                                         .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
+                                        .padding(.vertical, 4)
+                                        .frame(height: 30)
                                         .background(AppColors.cardDark)
                                         .cornerRadius(16)
                                         .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))

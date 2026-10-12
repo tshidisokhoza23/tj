@@ -16,6 +16,8 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
+	<key>NSContactsUsageDescription</key>
+	<string>TJ uses your contacts to find friends who are already on TJ and help you connect with them easily.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
