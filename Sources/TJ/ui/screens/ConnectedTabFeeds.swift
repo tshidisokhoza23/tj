@@ -1460,9 +1460,9 @@ struct CreatePostSheet: View {
                     VStack(spacing: 0) {
                         Text("\(max(charLimit - postText.count, 0))")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(postText.count > charLimit ? AppColors.error : AppColors.tealAccent)
+                            .foregroundColor(postText.count > charLimit ? Color.red : AppColors.tealAccent)
                         if !draftLabel.isEmpty {
-                            Text(draftLabel).font(.system(size: 11)).foregroundColor(AppColors.textTertiary)
+                            Text(draftLabel).font(.system(size: 11)).foregroundColor(Color.gray)
                         }
                     }
                 }
