@@ -74,10 +74,6 @@ public struct JobsHomeView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 4)
                 }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 6)
-                }
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
