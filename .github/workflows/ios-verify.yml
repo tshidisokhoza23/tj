@@ -30,38 +30,6 @@ jobs:
       - name: Resolve Package Dependencies
         run: xcodebuild -resolvePackageDependencies -project TJ.xcodeproj -scheme TJ || true
 
-      - name: Import Apple Signing Certificate (If Configured)
-        env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.APPLE_BUILD_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.APPLE_P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_PROVISION_PROFILE_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          if [ -n "$BUILD_CERTIFICATE_BASE64" ] && [ -n "$BUILD_PROVISION_PROFILE_BASE64" ]; then
-            echo "==> Configuring Apple Code Signing Certificate and Provisioning Profile..."
-            CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-            PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
-            KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-            echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-            echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
-
-            security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-            security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-            security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-            security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -T /usr/bin/codesign
-            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-            security list-keychains -s $KEYCHAIN_PATH $(security list-keychains | xargs)
-
-            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-            cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
-            echo "SIGNED_BUILD=true" >> $GITHUB_ENV
-          else
-            echo "==> No Apple Signing secrets found in repository. Building unsigned fallback."
-            echo "SIGNED_BUILD=false" >> $GITHUB_ENV
-          fi
-
       - name: Compile App (Simulator)
         run: |
           xcodebuild clean build \
@@ -76,7 +44,7 @@ jobs:
             CODE_SIGN_ENTITLEMENTS="" \
             BUILD_DIR="$PWD/build"
 
-      - name: Package Simulator IPA
+      - name: Package into .ipa
         run: |
           mkdir -p Payload
           if [ -d "$PWD/build/Release-iphoneos/TJ.app" ]; then
@@ -86,45 +54,33 @@ jobs:
           fi
           zip -r TJ.ipa Payload
 
-      - name: Upload Simulator IPA
+      - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: TJ-iOS-App
           path: TJ.ipa
 
-      - name: Compile App (Device)
+      - name: Compile App (iPhone)
         run: |
-          if [ "$SIGNED_BUILD" = "true" ]; then
-            echo "==> Building Signed iOS Device App..."
-            xcodebuild build \
-              -project TJ.xcodeproj \
-              -scheme TJ \
-              -configuration Release \
-              -sdk iphoneos \
-              -destination 'generic/platform=iOS' \
-              BUILD_DIR="$PWD/build-device"
-          else
-            echo "==> Building Unsigned Fallback..."
-            xcodebuild build \
-              -project TJ.xcodeproj \
-              -scheme TJ \
-              -configuration Release \
-              -sdk iphoneos \
-              -destination 'generic/platform=iOS' \
-              CODE_SIGNING_ALLOWED=NO \
-              CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGN_IDENTITY="" \
-              BUILD_DIR="$PWD/build-device"
-          fi
+          xcodebuild build \
+            -project TJ.xcodeproj \
+            -scheme TJ \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            BUILD_DIR="$PWD/build-device"
 
-      - name: Package Device IPA
+      - name: Package device IPA
         run: |
           rm -rf Payload
           mkdir -p Payload
           cp -r "$PWD/build-device/Release-iphoneos/TJ.app" Payload/
           zip -r TJ-device.ipa Payload
 
-      - name: Upload Device IPA
+      - name: Upload device IPA
         uses: actions/upload-artifact@v4
         with:
           name: TJ-iOS-Device
