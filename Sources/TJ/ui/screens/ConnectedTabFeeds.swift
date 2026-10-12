@@ -1427,13 +1427,18 @@ struct CreatePostSheet: View {
 
     private let charLimit = 280
 
+    private var isTextValid: Bool {
+        !postText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    private var isMediaValid: Bool {
+        !loadedData.isEmpty || !uploadedURLs.isEmpty
+    }
+    private var isPollValid: Bool {
+        showPoll && !pollOptions.isEmpty
+    }
     private var canPost: Bool {
-        let textValid = !postText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let mediaValid = !loadedData.isEmpty || !uploadedURLs.isEmpty
-        let pollValid = showPoll && pollOptions.contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        let hasContent = textValid || mediaValid || pollValid
-        let withinLimit = postText.count <= charLimit
-        return hasContent && withinLimit
+        if postText.count > charLimit { return false }
+        return isTextValid || isMediaValid || isPollValid
     }
 
     var body: some View {
