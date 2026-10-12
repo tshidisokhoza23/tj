@@ -528,8 +528,8 @@ public struct ApiJobApplication: Codable, Sendable {
 }
 
 public protocol JobApiProtocol: Sendable {
-    func getJobs(page: Int, cursor: String?, limit: Int, jobType: String?, featuredOnly: Bool, location: String?, salaryMin: Double?, postedWithinDays: Int?) async throws -> JobsResponse
-    func search(query: String, location: String?, salaryMin: Double?, jobType: String?, featuredOnly: Bool, postedWithinDays: Int?) async throws -> JobsResponse
+    func getJobs(page: Int, cursor: String?, limit: Int, jobType: String?, featuredOnly: Bool, location: String?, salaryMin: Double?, postedWithinDays: Int?, category: String?) async throws -> JobsResponse
+    func search(query: String, location: String?, salaryMin: Double?, jobType: String?, featuredOnly: Bool, postedWithinDays: Int?, category: String?) async throws -> JobsResponse
     func reportJob(jobId: String, reason: String, details: String) async throws -> StatusResponse
     func anonymizeJobData() async throws -> StatusResponse
     func getMyJobs() async throws -> JobsResponse
@@ -554,7 +554,7 @@ public final class JobApi: JobApiProtocol, @unchecked Sendable {
         self.client = client
     }
 
-    public func getJobs(page: Int = 1, cursor: String? = nil, limit: Int = 50, jobType: String? = nil, featuredOnly: Bool = false, location: String? = nil, salaryMin: Double? = nil, postedWithinDays: Int? = nil) async throws -> JobsResponse {
+    public func getJobs(page: Int = 1, cursor: String? = nil, limit: Int = 50, jobType: String? = nil, featuredOnly: Bool = false, location: String? = nil, salaryMin: Double? = nil, postedWithinDays: Int? = nil, category: String? = nil) async throws -> JobsResponse {
         var queryItems = [
             URLQueryItem(name: "page", value: "\(page)"),
             URLQueryItem(name: "limit", value: "\(limit)")
@@ -565,16 +565,18 @@ public final class JobApi: JobApiProtocol, @unchecked Sendable {
         if let location, !location.isEmpty { queryItems.append(URLQueryItem(name: "location", value: location)) }
         if let salaryMin { queryItems.append(URLQueryItem(name: "salary_min", value: "\(salaryMin)")) }
         if let postedWithinDays, postedWithinDays > 0 { queryItems.append(URLQueryItem(name: "posted_within_days", value: "\(postedWithinDays)")) }
+        if let category, !category.isEmpty, category != "All" { queryItems.append(URLQueryItem(name: "category", value: category)) }
         return try await client.request(path: "jobs", queryItems: queryItems)
     }
 
-    public func search(query: String, location: String? = nil, salaryMin: Double? = nil, jobType: String? = nil, featuredOnly: Bool = false, postedWithinDays: Int? = nil) async throws -> JobsResponse {
+    public func search(query: String, location: String? = nil, salaryMin: Double? = nil, jobType: String? = nil, featuredOnly: Bool = false, postedWithinDays: Int? = nil, category: String? = nil) async throws -> JobsResponse {
         var queryItems = [URLQueryItem(name: "query", value: query)]
         if let location, !location.isEmpty { queryItems.append(URLQueryItem(name: "location", value: location)) }
         if let salaryMin { queryItems.append(URLQueryItem(name: "salary_min", value: "\(salaryMin)")) }
         if let jobType, !jobType.isEmpty { queryItems.append(URLQueryItem(name: "job_type", value: jobType)) }
         if featuredOnly { queryItems.append(URLQueryItem(name: "featured", value: "true")) }
         if let postedWithinDays, postedWithinDays > 0 { queryItems.append(URLQueryItem(name: "posted_within_days", value: "\(postedWithinDays)")) }
+        if let category, !category.isEmpty, category != "All" { queryItems.append(URLQueryItem(name: "category", value: category)) }
         return try await client.request(path: "jobs/search", queryItems: queryItems)
     }
 

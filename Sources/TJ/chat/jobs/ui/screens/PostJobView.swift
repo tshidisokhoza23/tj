@@ -5,7 +5,7 @@ public struct PostJobView: View {
     @StateObject private var viewModel: JobViewModel
 
     @State private var title: String = ""
-    @State private var category: String = ""
+    @State private var category: String = "General"
     @State private var descriptionText: String = ""
     @State private var skills: String = ""
     @State private var location: String = ""
@@ -32,9 +32,22 @@ public struct PostJobView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Category (e.g., Software, General Work)").font(.caption).foregroundColor(.secondary)
-                        TextField("Category", text: $category)
-                            .textFieldStyle(.roundedBorder)
+                        Text("Category").font(.caption).foregroundColor(.secondary)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(["General", "IT", "Finance", "Sales", "Healthcare", "Education", "Engineering", "Marketing", "Hospitality", "Logistics", "Admin", "Legal", "Construction"], id: \.self) { chip in
+                                    Button(chip) { category = chip }
+                                        .font(.system(size: 13, weight: .black))
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                        .foregroundColor(category == chip ? .white : AppColors.tealAccent)
+                                        .background {
+                                            if category == chip { AppColors.primaryGradient } else { AppColors.surfaceElevated }
+                                        }
+                                        .clipShape(Capsule())
+                                }
+                            }
+                        }
                     }
 
                     VStack(alignment: .leading, spacing: 6) {

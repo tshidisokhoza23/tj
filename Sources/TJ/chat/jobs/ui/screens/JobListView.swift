@@ -1,91 +1,127 @@
 import SwiftUI
 
+private let jobCategories = [
+    "All", "General", "IT", "Finance", "Sales", "Healthcare", "Education",
+    "Engineering", "Marketing", "Hospitality", "Logistics", "Admin", "Legal", "Construction"
+]
+
 public struct JobsHomeView: View {
     @StateObject private var viewModel = JobViewModel()
     @State private var selected: Job?
     @State private var showPostJob = false
+    @State private var showMenu = false
+    @State private var showApplications = false
+    @State private var showProfile = false
+    @State private var searching = false
+    @State private var query = ""
     @Environment(\.openURL) private var openURL
 
     public init() {}
 
     public var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottomTrailing) {
-                VStack(spacing: 0) {
-                    VStack(spacing: 8) {
-                        HStack {
-                            TextField("Location", text: Binding(get: { viewModel.location }, set: { viewModel.setLocation($0) }))
-                                .textFieldStyle(.roundedBorder)
-                            TextField("Min salary", text: Binding(get: { viewModel.salaryMin }, set: { viewModel.setSalaryMin($0) }))
-                                .keyboardType(.decimalPad)
-                                .textFieldStyle(.roundedBorder)
-                        }
-                        .padding(.horizontal, 16)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach([(0, "Any date"), (1, "24h"), (7, "7 days"), (30, "30 days")], id: \.0) { days, label in
-                                    Button(label) { viewModel.setPostedWithinDays(days) }
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(viewModel.postedWithinDays == days ? Color.appPrimary : Color.primary.opacity(0.08))
-                                        .foregroundColor(viewModel.postedWithinDays == days ? .white : .primary)
-                                        .clipShape(Capsule())
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                        }
-                    }
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(["All", "Full-time", "Part-time", "Remote", "Featured"], id: \.self) { chip in
-                                Button(chip) { viewModel.selectFeedChip(chip) }
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(viewModel.feedChip == chip ? Color.appPrimary : Color.primary.opacity(0.08))
-                                    .foregroundColor(viewModel.feedChip == chip ? .white : .primary)
-                                    .clipShape(Capsule())
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                    }
+            VStack(spacing: 0) {
+                if searching {
                     HStack {
-                        Button("My listings") { viewModel.fetchMyJobs() }
-                        Button("Anonymize applications") { Task { _ = await viewModel.anonymizeJobData() } }
+                        TextField("Search jobs", text: $query)
+                            .textFieldStyle(.roundedBorder)
+                            .onChange(of: query) { value in viewModel.search(value) }
+                        Button("Cancel") {
+                            searching = false
+                            query = ""
+                            viewModel.fetchJobs()
+                        }
                     }
-                    .font(.caption)
-                    if !viewModel.myJobs.isEmpty {
-                        ForEach(viewModel.myJobs.prefix(5)) { job in
-                            HStack {
-                                Text(job.title).lineLimit(1)
-                                Spacer()
-                                Button("Close") { viewModel.closeJob(jobId: job.id) }
-                                Button("Renew") {
-                                    Task {
-                                        if let url = await viewModel.renewJob(jobId: job.id), let link = URL(string: url) {
-                                            openURL(link)
-                                        }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                } else {
+                    HStack {
+                        Button(action: { showMenu = true }) {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.primary)
+                        }
+                        Spacer()
+                        AppLogo(size: 36)
+                        Spacer()
+                        Button(action: { searching = true }) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.primary)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                }
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(jobCategories, id: \.self) { chip in
+                            let selectedChip = viewModel.feedChip == chip
+                            Button(chip) { viewModel.selectFeedChip(chip) }
+                                .font(.system(size: 13, weight: .black))
+                                .padding(.horizontal, 18)
+                                .padding(.vertical, 8)
+                                .foregroundColor(selectedChip ? .white : AppColors.tealAccent)
+                                .background {
+                                    if selectedChip { AppColors.primaryGradient } else { AppColors.surfaceElevated }
+                                }
+                                .clipShape(Capsule())
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                }
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        TextField("Location", text: Binding(get: { viewModel.location }, set: { viewModel.setLocation($0) }))
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 140)
+                        TextField("Min salary", text: Binding(get: { viewModel.salaryMin }, set: { viewModel.setSalaryMin($0) }))
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 110)
+                        ForEach([(0, "Any date"), (1, "24h"), (7, "7 days"), (30, "30 days")], id: \.0) { days, label in
+                            Button(label) { viewModel.setPostedWithinDays(days) }
+                                .font(.system(size: 13, weight: .semibold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .foregroundColor(viewModel.postedWithinDays == days ? .white : AppColors.tealAccent)
+                                .background {
+                                    if viewModel.postedWithinDays == days { AppColors.primaryGradient } else { AppColors.surfaceElevated }
+                                }
+                                .clipShape(Capsule())
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 6)
+                }
+
+                if !viewModel.myJobs.isEmpty {
+                    ForEach(viewModel.myJobs.prefix(5)) { job in
+                        HStack {
+                            Text(job.title).lineLimit(1)
+                            Spacer()
+                            Button("Close") { viewModel.closeJob(jobId: job.id) }
+                            Button("Renew") {
+                                Task {
+                                    if let url = await viewModel.renewJob(jobId: job.id), let link = URL(string: url) {
+                                        openURL(link)
                                     }
                                 }
                             }
-                            .padding(.horizontal, 16)
                         }
+                        .padding(.horizontal, 16)
                     }
-                    JobListView(jobs: viewModel.jobs.data ?? [], emptyMessage: viewModel.feedChip == "All" ? "Open roles show up here. Use the button to post one." : "Try another filter or check back later.") { selected = $0 }
                 }
-                Button(action: { showPostJob = true }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 56, height: 56)
-                        .background(Color.appPrimary)
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
-                        .padding(24)
-                }
+
+                JobListView(
+                    jobs: viewModel.jobs.data ?? [],
+                    emptyMessage: viewModel.feedChip == "All" ? "Open roles show up here. Post one from the menu." : "Try another category or check back later."
+                ) { selected = $0 }
             }
-            .navigationTitle("Jobs")
+            .toolbar(.hidden, for: .navigationBar)
         }
         .sheet(item: $selected) { job in
             JobDetailView(
@@ -97,6 +133,25 @@ public struct JobsHomeView: View {
         }
         .sheet(isPresented: $showPostJob) {
             PostJobView(onBack: { showPostJob = false })
+        }
+        .sheet(isPresented: $showApplications) {
+            JobApplicationsView(
+                onBack: { showApplications = false },
+                onViewJobDetails: { _ in showApplications = false },
+                onContactRecruiter: { _ in },
+                onSetReminder: { _ in }
+            )
+        }
+        .sheet(isPresented: $showProfile) {
+            JobProfileView(onClose: { showProfile = false })
+        }
+        .confirmationDialog("Jobs", isPresented: $showMenu, titleVisibility: .visible) {
+            Button("Post a job") { showPostJob = true }
+            Button("My applications") { showApplications = true }
+            Button("Job profile") { showProfile = true }
+            Button("My listings") { viewModel.fetchMyJobs() }
+            Button("Anonymize applications") { Task { _ = await viewModel.anonymizeJobData() } }
+            Button("Cancel", role: .cancel) {}
         }
     }
 }

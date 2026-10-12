@@ -2,8 +2,8 @@ import Foundation
 import Combine
 
 public protocol JobRepository {
-    func getJobs(cursor: String?, limit: Int, jobType: String?, featuredOnly: Bool, location: String?, salaryMin: Double?, postedWithinDays: Int?) -> AsyncStream<Resource<[Job]>>
-    func searchJobs(query: String, location: String?, salaryMin: Double?, jobType: String?, featuredOnly: Bool, postedWithinDays: Int?) -> AsyncStream<Resource<[Job]>>
+    func getJobs(cursor: String?, limit: Int, jobType: String?, featuredOnly: Bool, location: String?, salaryMin: Double?, postedWithinDays: Int?, category: String?) -> AsyncStream<Resource<[Job]>>
+    func searchJobs(query: String, location: String?, salaryMin: Double?, jobType: String?, featuredOnly: Bool, postedWithinDays: Int?, category: String?) -> AsyncStream<Resource<[Job]>>
     func applyForJob(jobId: String) -> AsyncStream<Resource<String>>
     func saveJob(jobId: String) async -> Resource<Bool>
     func unsaveJob(jobId: String) async -> Resource<Bool>
@@ -22,7 +22,7 @@ public protocol JobRepository {
 
 public extension JobRepository {
     func getJobs(cursor: String?, limit: Int, jobType: String? = nil, featuredOnly: Bool = false) -> AsyncStream<Resource<[Job]>> {
-        getJobs(cursor: cursor, limit: limit, jobType: jobType, featuredOnly: featuredOnly, location: nil, salaryMin: nil, postedWithinDays: nil)
+        getJobs(cursor: cursor, limit: limit, jobType: jobType, featuredOnly: featuredOnly, location: nil, salaryMin: nil, postedWithinDays: nil, category: nil)
     }
 }
 
@@ -36,13 +36,13 @@ public final class JobRepositoryImpl: JobRepository, @unchecked Sendable {
         self.localStore = localStore ?? JobLocalStore()
     }
 
-    public func getJobs(cursor: String? = nil, limit: Int = 50, jobType: String? = nil, featuredOnly: Bool = false, location: String? = nil, salaryMin: Double? = nil, postedWithinDays: Int? = nil) -> AsyncStream<Resource<[Job]>> {
+    public func getJobs(cursor: String? = nil, limit: Int = 50, jobType: String? = nil, featuredOnly: Bool = false, location: String? = nil, salaryMin: Double? = nil, postedWithinDays: Int? = nil, category: String? = nil) -> AsyncStream<Resource<[Job]>> {
         AsyncStream { continuation in
             Task {
                 continuation.yield(.loading(nil))
                 let filtering = !(jobType ?? "").isEmpty || featuredOnly || !(location ?? "").isEmpty || salaryMin != nil || (postedWithinDays ?? 0) > 0
                 do {
-                    let response = try await jobApi.getJobs(page: 1, cursor: cursor, limit: limit, jobType: jobType, featuredOnly: featuredOnly, location: location, salaryMin: salaryMin, postedWithinDays: postedWithinDays)
+                    let response = try await jobApi.getJobs(page: 1, cursor: cursor, limit: limit, jobType: jobType, featuredOnly: featuredOnly, location: location, salaryMin: salaryMin, postedWithinDays: postedWithinDays, category: category)
                     let models = response.jobs.map { $0.toModel() }
                     if !filtering {
                         await localStore.insertJobs(models.map { $0.toEntity() })
@@ -57,12 +57,12 @@ public final class JobRepositoryImpl: JobRepository, @unchecked Sendable {
         }
     }
 
-    public func searchJobs(query: String, location: String? = nil, salaryMin: Double? = nil, jobType: String? = nil, featuredOnly: Bool = false, postedWithinDays: Int? = nil) -> AsyncStream<Resource<[Job]>> {
+    public func searchJobs(query: String, location: String? = nil, salaryMin: Double? = nil, jobType: String? = nil, featuredOnly: Bool = false, postedWithinDays: Int? = nil, category: String? = nil) -> AsyncStream<Resource<[Job]>> {
         AsyncStream { continuation in
             Task {
                 continuation.yield(.loading(nil))
                 do {
-                    let response = try await jobApi.search(query: query, location: location, salaryMin: salaryMin, jobType: jobType, featuredOnly: featuredOnly, postedWithinDays: postedWithinDays)
+                    let response = try await jobApi.search(query: query, location: location, salaryMin: salaryMin, jobType: jobType, featuredOnly: featuredOnly, postedWithinDays: postedWithinDays, category: category)
                     let models = response.jobs.map { $0.toModel() }
                     continuation.yield(.success(models))
                 } catch {

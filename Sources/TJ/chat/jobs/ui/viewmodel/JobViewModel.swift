@@ -47,11 +47,23 @@ public class JobViewModel: ObservableObject {
     }
 
     public func fetchJobs() {
-        let featuredOnly = feedChip == "Featured"
-        let jobType = (feedChip == "All" || featuredOnly) ? nil : feedChip
+        let category = feedChip == "All" ? nil : feedChip
         let salary = Double(salaryMin)
         Task {
-            for await result in repository.getJobs(cursor: nil, limit: 50, jobType: jobType, featuredOnly: featuredOnly, location: location.isEmpty ? nil : location, salaryMin: salary, postedWithinDays: postedWithinDays > 0 ? postedWithinDays : nil) {
+            for await result in repository.getJobs(cursor: nil, limit: 50, jobType: nil, featuredOnly: false, location: location.isEmpty ? nil : location, salaryMin: salary, postedWithinDays: postedWithinDays > 0 ? postedWithinDays : nil, category: category) {
+                self.jobs = result
+            }
+        }
+    }
+
+    public func search(_ query: String) {
+        let category = feedChip == "All" ? nil : feedChip
+        Task {
+            if query.trimmingCharacters(in: .whitespaces).isEmpty {
+                fetchJobs()
+                return
+            }
+            for await result in repository.searchJobs(query: query, category: category) {
                 self.jobs = result
             }
         }
