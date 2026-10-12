@@ -377,6 +377,11 @@ public struct CreateJobRequest: Codable, Sendable {
     public let duration_days: Int
     public let company: String?
     public let location_city: String?
+    public let job_type: String?
+    public let package_type: String?
+    public let salary_min: Double?
+    public let salary_max: Double?
+    public let requirements: String?
     public let category: String?
     public let skills: [String]?
 
@@ -388,6 +393,11 @@ public struct CreateJobRequest: Codable, Sendable {
         duration_days: Int,
         company: String? = nil,
         location_city: String? = nil,
+        job_type: String? = nil,
+        package_type: String? = nil,
+        salary_min: Double? = nil,
+        salary_max: Double? = nil,
+        requirements: String? = nil,
         category: String? = nil,
         skills: [String]? = nil
     ) {
@@ -398,9 +408,34 @@ public struct CreateJobRequest: Codable, Sendable {
         self.duration_days = duration_days
         self.company = company
         self.location_city = location_city
+        self.job_type = job_type
+        self.package_type = package_type
+        self.salary_min = salary_min
+        self.salary_max = salary_max
+        self.requirements = requirements
         self.category = category
         self.skills = skills
     }
+}
+
+public struct ReportJobRequest: Codable, Sendable {
+    public let reason: String
+    public let details: String
+    public init(reason: String, details: String = "") {
+        self.reason = reason
+        self.details = details
+    }
+}
+
+public struct RenewJobRequest: Codable, Sendable {
+    public let package_type: String
+    public init(package_type: String) { self.package_type = package_type }
+}
+
+public struct JobPaymentResponse: Codable, Sendable {
+    public let authorization_url: String?
+    public let amount_cents: Int?
+    public let payment_reference: String?
 }
 
 public struct ApiJob: Codable, Sendable {
@@ -425,6 +460,11 @@ public struct ApiJob: Codable, Sendable {
     public let apply_url: String?
     public let has_applied_internal: Bool?
     public let has_clicked_external: Bool?
+    public let is_featured: Bool?
+    public let views_count: Int64?
+    public let payment_required: Bool?
+    public let authorization_url: String?
+    public let listing_status: String?
 
     public func getTrackingUrl() -> String? {
         apply_redirect_url ?? tracking_apply_url ?? apply_url
@@ -451,7 +491,12 @@ public struct ApiJob: Codable, Sendable {
             sourcePartner: source_partner,
             trackingApplyUrl: getTrackingUrl(),
             hasAppliedInternal: is_applied || (has_applied_internal ?? false),
-            hasClickedExternal: has_clicked_external ?? false
+            hasClickedExternal: has_clicked_external ?? false,
+            isFeatured: is_featured ?? false,
+            viewsCount: views_count ?? 0,
+            paymentRequired: payment_required ?? false,
+            authorizationUrl: authorization_url,
+            listingStatus: listing_status
         )
     }
 }
@@ -475,7 +520,7 @@ public struct ApiJobApplication: Codable, Sendable {
             companyName: company_name ?? "",
             location: location ?? "",
             appliedDate: applied_date,
-            status: ApplicationStatus(rawValue: status.uppercased()) ?? .pending,
+            status: ApplicationStatus.fromServer(status),
             logoHex: "#2196F3",
             conversationId: conversation_id
         )
@@ -483,8 +528,13 @@ public struct ApiJobApplication: Codable, Sendable {
 }
 
 public protocol JobApiProtocol: Sendable {
-    func getJobs(page: Int, cursor: String?, limit: Int) async throws -> JobsResponse
-    func search(query: String) async throws -> JobsResponse
+    func getJobs(page: Int, cursor: String?, limit: Int, jobType: String?, featuredOnly: Bool, location: String?, salaryMin: Double?, postedWithinDays: Int?) async throws -> JobsResponse
+    func search(query: String, location: String?, salaryMin: Double?, jobType: String?, featuredOnly: Bool, postedWithinDays: Int?) async throws -> JobsResponse
+    func reportJob(jobId: String, reason: String, details: String) async throws -> StatusResponse
+    func anonymizeJobData() async throws -> StatusResponse
+    func getMyJobs() async throws -> JobsResponse
+    func closeJob(jobId: String) async throws -> StatusResponse
+    func renewJob(jobId: String, packageType: String) async throws -> JobPaymentResponse
     func applyForJob(jobId: String) async throws -> ConversationResponse
     func saveJob(jobId: String) async throws -> StatusResponse
     func unsaveJob(jobId: String) async throws -> StatusResponse
@@ -504,17 +554,48 @@ public final class JobApi: JobApiProtocol, @unchecked Sendable {
         self.client = client
     }
 
-    public func getJobs(page: Int = 1, cursor: String? = nil, limit: Int = 50) async throws -> JobsResponse {
+    public func getJobs(page: Int = 1, cursor: String? = nil, limit: Int = 50, jobType: String? = nil, featuredOnly: Bool = false, location: String? = nil, salaryMin: Double? = nil, postedWithinDays: Int? = nil) async throws -> JobsResponse {
         var queryItems = [
             URLQueryItem(name: "page", value: "\(page)"),
             URLQueryItem(name: "limit", value: "\(limit)")
         ]
         if let cursor = cursor { queryItems.append(URLQueryItem(name: "cursor", value: cursor)) }
+        if let jobType, !jobType.isEmpty { queryItems.append(URLQueryItem(name: "job_type", value: jobType)) }
+        if featuredOnly { queryItems.append(URLQueryItem(name: "featured", value: "true")) }
+        if let location, !location.isEmpty { queryItems.append(URLQueryItem(name: "location", value: location)) }
+        if let salaryMin { queryItems.append(URLQueryItem(name: "salary_min", value: "\(salaryMin)")) }
+        if let postedWithinDays, postedWithinDays > 0 { queryItems.append(URLQueryItem(name: "posted_within_days", value: "\(postedWithinDays)")) }
         return try await client.request(path: "jobs", queryItems: queryItems)
     }
 
-    public func search(query: String) async throws -> JobsResponse {
-        return try await client.request(path: "jobs/search", queryItems: [URLQueryItem(name: "query", value: query)])
+    public func search(query: String, location: String? = nil, salaryMin: Double? = nil, jobType: String? = nil, featuredOnly: Bool = false, postedWithinDays: Int? = nil) async throws -> JobsResponse {
+        var queryItems = [URLQueryItem(name: "query", value: query)]
+        if let location, !location.isEmpty { queryItems.append(URLQueryItem(name: "location", value: location)) }
+        if let salaryMin { queryItems.append(URLQueryItem(name: "salary_min", value: "\(salaryMin)")) }
+        if let jobType, !jobType.isEmpty { queryItems.append(URLQueryItem(name: "job_type", value: jobType)) }
+        if featuredOnly { queryItems.append(URLQueryItem(name: "featured", value: "true")) }
+        if let postedWithinDays, postedWithinDays > 0 { queryItems.append(URLQueryItem(name: "posted_within_days", value: "\(postedWithinDays)")) }
+        return try await client.request(path: "jobs/search", queryItems: queryItems)
+    }
+
+    public func reportJob(jobId: String, reason: String, details: String = "") async throws -> StatusResponse {
+        return try await client.request(path: "jobs/\(jobId)/report", method: .post, body: ReportJobRequest(reason: reason, details: details))
+    }
+
+    public func anonymizeJobData() async throws -> StatusResponse {
+        return try await client.request(path: "jobs/anonymize", method: .post)
+    }
+
+    public func getMyJobs() async throws -> JobsResponse {
+        return try await client.request(path: "jobs/mine")
+    }
+
+    public func closeJob(jobId: String) async throws -> StatusResponse {
+        return try await client.request(path: "jobs/\(jobId)/close", method: .post)
+    }
+
+    public func renewJob(jobId: String, packageType: String) async throws -> JobPaymentResponse {
+        return try await client.request(path: "jobs/\(jobId)/renew", method: .post, body: RenewJobRequest(package_type: packageType))
     }
 
     public func applyForJob(jobId: String) async throws -> ConversationResponse {

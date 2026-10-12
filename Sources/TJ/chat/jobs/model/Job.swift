@@ -21,6 +21,11 @@ public struct Job: Identifiable, Hashable, Codable {
     public var trackingApplyUrl: String?
     public var hasAppliedInternal: Bool
     public var hasClickedExternal: Bool
+    public var isFeatured: Bool
+    public var viewsCount: Int64
+    public var paymentRequired: Bool
+    public var authorizationUrl: String?
+    public var listingStatus: String?
 
     public var logoColor: Color {
         Color(hex: logoHex)
@@ -46,7 +51,12 @@ public struct Job: Identifiable, Hashable, Codable {
         sourcePartner: String? = nil,
         trackingApplyUrl: String? = nil,
         hasAppliedInternal: Bool = false,
-        hasClickedExternal: Bool = false
+        hasClickedExternal: Bool = false,
+        isFeatured: Bool = false,
+        viewsCount: Int64 = 0,
+        paymentRequired: Bool = false,
+        authorizationUrl: String? = nil,
+        listingStatus: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -68,5 +78,10 @@ public struct Job: Identifiable, Hashable, Codable {
         self.trackingApplyUrl = trackingApplyUrl
         self.hasAppliedInternal = hasAppliedInternal
         self.hasClickedExternal = hasClickedExternal
+        self.isFeatured = isFeatured
+        self.viewsCount = viewsCount
+        self.paymentRequired = paymentRequired
+        self.authorizationUrl = authorizationUrl
+        self.listingStatus = listingStatus
     }
 }

@@ -36,17 +36,29 @@ public struct JobItemView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(job.companyName)
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        if job.isFeatured {
+                            Text("FEATURED")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(Color(red: 0.72, green: 0.53, blue: 0.04))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.yellow.opacity(0.25))
+                                .cornerRadius(4)
+                        }
+                    }
                     Text(job.title)
                         .font(.system(size: 17, weight: .bold))
                         .foregroundColor(.primary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
 
+                    if job.isVerified || job.isExternal {
                     HStack(spacing: 4) {
-                        Text(job.companyName)
-                            .font(.system(size: 15))
-                            .foregroundColor(.primary.opacity(0.9))
-
                         if job.isVerified {
                             Image(systemName: "checkmark.seal.fill")
                                 .font(.system(size: 14))
@@ -63,10 +75,12 @@ public struct JobItemView: View {
                                 .cornerRadius(4)
                         }
                     }
+                    }
 
-                    Text(job.location)
+                    Text(job.location + " • " + job.jobType + (job.viewsCount > 0 ? " • \(job.viewsCount) views" : ""))
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
+                        .lineLimit(2)
 
                     HStack(spacing: 8) {
                         Text(job.jobType)

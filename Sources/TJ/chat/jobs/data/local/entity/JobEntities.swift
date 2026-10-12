@@ -19,6 +19,8 @@ public struct JobEntity: Codable, Identifiable, Hashable {
     public var trackingApplyUrl: String?
     public var hasAppliedInternal: Bool
     public var hasClickedExternal: Bool
+    public var isFeatured: Bool
+    public var viewsCount: Int64
 
     public init(
         id: String,
@@ -38,7 +40,9 @@ public struct JobEntity: Codable, Identifiable, Hashable {
         sourcePartner: String? = nil,
         trackingApplyUrl: String? = nil,
         hasAppliedInternal: Bool = false,
-        hasClickedExternal: Bool = false
+        hasClickedExternal: Bool = false,
+        isFeatured: Bool = false,
+        viewsCount: Int64 = 0
     ) {
         self.id = id
         self.title = title
@@ -58,6 +62,8 @@ public struct JobEntity: Codable, Identifiable, Hashable {
         self.trackingApplyUrl = trackingApplyUrl
         self.hasAppliedInternal = hasAppliedInternal
         self.hasClickedExternal = hasClickedExternal
+        self.isFeatured = isFeatured
+        self.viewsCount = viewsCount
     }
 }
 

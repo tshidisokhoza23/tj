@@ -20,7 +20,9 @@ public extension Job {
             sourcePartner: sourcePartner,
             trackingApplyUrl: trackingApplyUrl,
             hasAppliedInternal: hasAppliedInternal,
-            hasClickedExternal: hasClickedExternal
+            hasClickedExternal: hasClickedExternal,
+            isFeatured: isFeatured,
+            viewsCount: viewsCount
         )
     }
 }
@@ -47,7 +49,9 @@ public extension JobEntity {
             sourcePartner: sourcePartner,
             trackingApplyUrl: trackingApplyUrl,
             hasAppliedInternal: hasAppliedInternal,
-            hasClickedExternal: hasClickedExternal
+            hasClickedExternal: hasClickedExternal,
+            isFeatured: isFeatured,
+            viewsCount: viewsCount
         )
     }
 }

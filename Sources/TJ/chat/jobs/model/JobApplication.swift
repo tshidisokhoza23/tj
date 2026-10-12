@@ -7,6 +7,23 @@ public enum ApplicationStatus: String, Codable, CaseIterable {
     case rejected = "REJECTED"
     case offered = "OFFERED"
 
+    public static func fromServer(_ value: String) -> ApplicationStatus {
+        switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "submitted", "pending":
+            return .pending
+        case "viewed", "reviewed", "shortlisted", "reviewing":
+            return .reviewing
+        case "interview":
+            return .interview
+        case "rejected":
+            return .rejected
+        case "hired", "offered":
+            return .offered
+        default:
+            return .pending
+        }
+    }
+
     public var label: String {
         switch self {
         case .pending: return "Pending"

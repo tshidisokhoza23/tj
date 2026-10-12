@@ -7,8 +7,10 @@ public struct PostJobView: View {
     @State private var title: String = ""
     @State private var category: String = ""
     @State private var descriptionText: String = ""
-    @State private var durationDays: String = "1"
     @State private var skills: String = ""
+    @State private var location: String = ""
+    @State private var packageType: String = "basic"
+    @Environment(\.openURL) private var openURL
 
     @MainActor public init(onBack: @escaping () -> Void, viewModel: JobViewModel? = nil) {
         self.onBack = onBack
@@ -43,10 +45,21 @@ public struct PostJobView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Duration (Days)").font(.caption).foregroundColor(.secondary)
-                        TextField("1", text: $durationDays)
-                            .keyboardType(.numberPad)
+                        Text("Location").font(.caption).foregroundColor(.secondary)
+                        TextField("City", text: $location)
                             .textFieldStyle(.roundedBorder)
+                    }
+                    HStack {
+                        Button("Basic R119") { packageType = "basic" }
+                            .padding(8)
+                            .background(packageType == "basic" ? Color.blue : Color.gray.opacity(0.2))
+                            .foregroundColor(packageType == "basic" ? .white : .primary)
+                            .cornerRadius(8)
+                        Button("Featured R279") { packageType = "featured" }
+                            .padding(8)
+                            .background(packageType == "featured" ? Color.blue : Color.gray.opacity(0.2))
+                            .foregroundColor(packageType == "featured" ? .white : .primary)
+                            .cornerRadius(8)
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
@@ -57,12 +70,11 @@ public struct PostJobView: View {
 
                     Spacer().frame(height: 16)
 
-                    let days = Int(durationDays) ?? 1
                     Button(action: {
                         let skillsList = skills.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-                        viewModel.createJob(title: title, description: descriptionText, category: category, skills: skillsList, durationDays: days)
+                        viewModel.createJob(title: title, description: descriptionText, category: category, skills: skillsList, durationDays: 30, locationCity: location, packageType: packageType)
                     }) {
-                        Text("Post Job (R\(days * 20).00)")
+                        Text(packageType == "featured" ? "Post featured job (R279)" : "Post job (R119)")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -71,7 +83,7 @@ public struct PostJobView: View {
                             .cornerRadius(12)
                     }
 
-                    Text("Posting cost is R20 per day. Your wallet will be charged upon posting.")
+                    Text("Listings run for 30 days. Payment opens after you post, unless you have a credit.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -86,6 +98,14 @@ public struct PostJobView: View {
                     Button(action: onBack) {
                         Image(systemName: "chevron.left")
                     }
+                }
+            }
+            .onChange(of: viewModel.createJobResult) { result in
+                if case .success(let job)? = result {
+                    if let raw = job.authorizationUrl, let url = URL(string: raw) {
+                        openURL(url)
+                    }
+                    onBack()
                 }
             }
         }
