@@ -168,13 +168,13 @@ public final class JobRepositoryImpl: JobRepository, @unchecked Sendable {
                 job_category: category,
                 required_skills: skills,
                 duration_days: durationDays,
+                company: company,
                 location_city: locationCity,
                 job_type: jobType,
                 package_type: packageType,
                 salary_min: salaryMin,
                 salary_max: salaryMax,
-                requirements: requirements,
-                company: company
+                requirements: requirements
             )
             let apiJob = try await jobApi.createJob(request: req)
             let model = apiJob.toModel()
