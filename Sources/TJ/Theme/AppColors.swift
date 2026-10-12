@@ -32,6 +32,8 @@ public enum AppColors {
 
     public static let tealAccent = Color(red: 0.0, green: 0.82, blue: 0.76)
     public static let purpleAccent = Color(red: 0.55, green: 0.36, blue: 0.96)
+    public static let openGreen = Color(red: 0.18, green: 0.80, blue: 0.44)
+    public static let waitlistOrange = Color(red: 1.0, green: 0.58, blue: 0.0)
 
     public static var cardDark: Color {
         #if canImport(UIKit)
