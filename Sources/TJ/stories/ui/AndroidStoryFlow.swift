@@ -110,51 +110,30 @@ struct NewStoryScreen: View {
 
     @State private var pickerItem: PhotosPickerItem?
     @State private var showPicker = true
-    @State private var caption = ""
-    @State private var preview: Data?
-    @State private var mime = "image/jpeg"
-    @State private var filename = "story.jpg"
-    @State private var mediaType = "image"
-    @State private var tooLong = false
+    @State private var editorMediaURL: URL?
+    @State private var isVideo = false
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            if let preview, mime.hasPrefix("image"), let image = UIImage(data: preview) {
-                Image(uiImage: image).resizable().scaledToFit()
-            } else if preview != nil {
-                Image(systemName: mediaType == "video" ? "video.fill" : "doc.fill")
-                    .font(.system(size: 72))
-                    .foregroundColor(.white)
-            }
-            VStack {
-                HStack {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left").foregroundColor(.white)
+            if let editorMediaURL {
+                MediaEditorOverlay(
+                    mediaURL: editorMediaURL,
+                    isVideo: isVideo,
+                    onDismiss: {
+                        self.editorMediaURL = nil
+                        onBack()
+                    },
+                    onSend: { editedURL, caption in
+                        let data = (try? Data(contentsOf: editedURL)) ?? Data()
+                        let mime = isVideo ? "video/mp4" : "image/jpeg"
+                        let filename = isVideo ? "story.mp4" : "story.jpg"
+                        let mediaType = isVideo ? "video" : "image"
+                        onNext(ShareDraft(content: caption, type: mediaType, data: data, filename: filename, mime: mime))
                     }
-                    VStack(alignment: .leading) {
-                        Text("New Story").foregroundColor(.white).font(.headline)
-                        if tooLong {
-                            Text("Video exceeds 2m limit").foregroundColor(.red).font(.caption)
-                        }
-                    }
-                    Spacer()
-                }
-                .padding()
-                Spacer()
-                HStack {
-                    TextField("Add a caption...", text: $caption)
-                        .foregroundColor(.white)
-                    Button("NEXT") {
-                        guard let preview, !tooLong else { return }
-                        onNext(ShareDraft(content: caption, type: mediaType, data: preview, filename: filename, mime: mime))
-                    }
-                    .disabled(preview == nil || tooLong)
-                    .foregroundColor(.white)
-                    .font(.headline)
-                }
-                .padding()
-                .background(Color.black.opacity(0.5))
+                )
+            } else {
+                ProgressView().tint(.white)
             }
         }
         .photosPicker(isPresented: $showPicker, selection: $pickerItem, matching: .any(of: [.images, .videos]))
@@ -166,21 +145,14 @@ struct NewStoryScreen: View {
 
     private func load(_ item: PhotosPickerItem) async {
         let type = item.supportedContentTypes.first
-        mime = type?.preferredMIMEType ?? "application/octet-stream"
-        mediaType = mime.hasPrefix("video") ? "video" : "image"
-        filename = mediaType == "video" ? "story.mp4" : "story.jpg"
-        preview = try? await item.loadTransferable(type: Data.self)
-        if mediaType == "video", let preview {
-            tooLong = await videoLongerThanTwoMinutes(preview)
-        }
-    }
-
-    private func videoLongerThanTwoMinutes(_ data: Data) async -> Bool {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("story-check.mp4")
-        try? data.write(to: url)
-        let asset = AVURLAsset(url: url)
-        let duration = (try? await asset.load(.duration)) ?? .zero
-        return duration.seconds > 120
+        let mime = type?.preferredMIMEType ?? "application/octet-stream"
+        let vid = mime.hasPrefix("video")
+        guard let data = try? await item.loadTransferable(type: Data.self), !data.isEmpty else { return }
+        let ext = vid ? "mp4" : "jpg"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("story_\(Date().timeIntervalSince1970).\(ext)")
+        try? data.write(to: tempURL)
+        self.isVideo = vid
+        self.editorMediaURL = tempURL
     }
 }
 
