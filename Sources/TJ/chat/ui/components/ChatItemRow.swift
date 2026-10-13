@@ -61,7 +61,7 @@ public struct ChatItemRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(name)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 16, weight: .semibold))
                         .lineLimit(1)
 
                     Spacer()
