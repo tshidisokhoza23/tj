@@ -1066,7 +1066,7 @@ struct FeedPostCard: View {
                 if shown.playsAsVideo, let url = shown.playbackURL ?? shown.mediaURL {
                     FeedVideoPreview(url: url)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 260)
+                        .frame(height: 480)
                         .clipped()
                         .cornerRadius(12)
                         .contentShape(Rectangle())
@@ -1159,7 +1159,7 @@ struct PostMediaGrid: View {
                     Color.gray.opacity(0.2)
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 250)
+                .frame(height: 480)
                 .clipped()
                 .cornerRadius(12)
                 .contentShape(Rectangle())
@@ -1171,7 +1171,7 @@ struct PostMediaGrid: View {
                     gridImage(validURLs[0], index: 0)
                     gridImage(validURLs[1], index: 1)
                 }
-                .frame(height: 200)
+                .frame(height: 380)
                 .cornerRadius(12)
             )
         } else if validURLs.count == 3 {
@@ -1183,7 +1183,7 @@ struct PostMediaGrid: View {
                         gridImage(validURLs[2], index: 2)
                     }
                 }
-                .frame(height: 220)
+                .frame(height: 420)
                 .cornerRadius(12)
             )
         } else {
@@ -1206,7 +1206,7 @@ struct PostMediaGrid: View {
                         }
                     }
                 }
-                .frame(height: 240)
+                .frame(height: 450)
                 .cornerRadius(12)
             )
         }
