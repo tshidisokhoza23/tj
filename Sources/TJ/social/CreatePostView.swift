@@ -284,9 +284,7 @@ public struct CreatePostView: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
                         .frame(height: 30)
-                        .background {
-                            if isSelected { AppColors.primaryGradient } else { AppColors.cardDark }
-                        }
+                        .background(isSelected ? AnyView(AppColors.primaryGradient) : AnyView(AppColors.cardDark))
                         .cornerRadius(16)
                         .overlay(RoundedRectangle(cornerRadius: 16).stroke(isSelected ? Color.clear : AppColors.borderDark, lineWidth: 1))
                 }
