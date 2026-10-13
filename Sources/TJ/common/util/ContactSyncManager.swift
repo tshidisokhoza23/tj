@@ -214,7 +214,12 @@ public final class ContactSyncManager {
         for (key, registered) in registeredByKey where !seen.contains(key) {
             result.append(registered)
         }
-        result.sort { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        result.sort { a, b in
+            if a.isRegistered != b.isRegistered {
+                return a.isRegistered && !b.isRegistered
+            }
+            return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
+        }
 
         await LocalDatabase.shared.upsertContacts(result.map {
             ContactEntity(

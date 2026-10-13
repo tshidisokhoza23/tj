@@ -14,10 +14,19 @@ public class ContactPickerViewModel: ObservableObject {
         fetchContacts()
     }
 
+    private func sortContacts(_ list: [Contact]) -> [Contact] {
+        list.sorted { a, b in
+            if a.isRegistered != b.isRegistered {
+                return a.isRegistered && !b.isRegistered
+            }
+            return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
+        }
+    }
+
     public func fetchContacts() {
         Task {
             let cachedEntities = await LocalDatabase.shared.getContacts()
-            let cached = cachedEntities.map { entity in
+            let cached = sortContacts(cachedEntities.map { entity in
                 Contact(
                     id: entity.id,
                     username: entity.username,
@@ -26,7 +35,7 @@ public class ContactPickerViewModel: ObservableObject {
                     phoneNumber: entity.phoneNumber,
                     isRegistered: entity.isRegistered
                 )
-            }
+            })
             if !cached.isEmpty {
                 self.allContacts = cached
                 self.contacts = .success(cached)
@@ -39,7 +48,7 @@ public class ContactPickerViewModel: ObservableObject {
     }
 
     private func syncDeviceContacts() async {
-        let matched = await ContactSyncManager.shared.syncAccountContacts()
+        let matched = sortContacts(await ContactSyncManager.shared.syncAccountContacts())
         if !matched.isEmpty {
             allContacts = matched
             contacts = .success(matched)

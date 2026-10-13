@@ -619,13 +619,7 @@ struct SocialFeedView: View {
             CreatorDashboardView()
         }
         .sheet(isPresented: $showCreatePost) {
-            CreatePostSheet { text, media, location, compose in
-                showCreatePost = false
-                Task {
-                    _ = try? await MediaActions.create(content: text, mediaURLs: media, location: location, compose: compose)
-                    await load(reset: true)
-                }
-            }
+            CreatePostView()
         }
         .sheet(isPresented: $showSavedPosts) {
             SavedPostsSheet { post in
