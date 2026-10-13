@@ -274,19 +274,21 @@ public struct CreatePostView: View {
                 .foregroundColor(.gray)
                 .padding(.horizontal)
 
-            CreatePostFlowLayout(data: categoriesList, spacing: 6) { cat in
-                let isSelected = selectedCategory == cat
-                Button(action: { selectedCategory = cat }) {
-                    Text(cat)
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .foregroundColor(isSelected ? .white : AppColors.brandPrimary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .frame(height: 30)
-                        .background(isSelected ? AnyView(AppColors.primaryGradient) : AnyView(AppColors.cardDark))
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(isSelected ? Color.clear : AppColors.borderDark, lineWidth: 1))
+            CreatePostFlowLayout(spacing: 6) {
+                ForEach(categoriesList, id: \.self) { cat in
+                    let isSelected = selectedCategory == cat
+                    Button(action: { selectedCategory = cat }) {
+                        Text(cat)
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundColor(isSelected ? .white : AppColors.brandPrimary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .frame(height: 30)
+                            .background(isSelected ? AnyView(AppColors.primaryGradient) : AnyView(AppColors.cardDark))
+                            .cornerRadius(16)
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(isSelected ? Color.clear : AppColors.borderDark, lineWidth: 1))
+                    }
                 }
             }
             .padding(.horizontal)
@@ -437,65 +439,46 @@ public struct CreatePostView: View {
     }
 }
 
-// MARK: - FlowLayout Component for Wrapped Category Chips
+// MARK: - Official Layout Protocol FlowLayout for Wrapped Category Chips
 
-struct CreatePostFlowLayout<Data: RandomAccessCollection, Content: View>: View where Data.Element: Hashable {
-    let data: Data
-    let spacing: CGFloat
-    let content: (Data.Element) -> Content
+struct CreatePostFlowLayout: Layout {
+    var spacing: CGFloat = 6
 
-    @State private var totalHeight = CGFloat.zero
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? .infinity
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
 
-    var body: some View {
-        VStack {
-            GeometryReader { geometry in
-                self.generateContent(in: geometry)
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > width {
+                currentX = 0
+                currentY += lineHeight + spacing
+                lineHeight = 0
             }
+            currentX += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
         }
-        .frame(height: totalHeight)
+
+        return CGSize(width: width, height: currentY + lineHeight)
     }
 
-    private func generateContent(in g: GeometryProxy) -> some View {
-        var width = CGFloat.zero
-        var height = CGFloat.zero
-        let items = Array(data)
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var currentX: CGFloat = bounds.minX
+        var currentY: CGFloat = bounds.minY
+        var lineHeight: CGFloat = 0
 
-        return ZStack(alignment: .topLeading) {
-            ForEach(items, id: \.self) { item in
-                self.content(item)
-                    .padding(.trailing, spacing)
-                    .padding(.bottom, spacing)
-                    .alignmentGuide(.leading) { d in
-                        if abs(width - d.width) > g.size.width {
-                            width = 0
-                            height -= d.height + spacing
-                        }
-                        let result = width
-                        if item == items.last {
-                            width = 0
-                        } else {
-                            width -= d.width + spacing
-                        }
-                        return result
-                    }
-                    .alignmentGuide(.top) { _ in
-                        let result = height
-                        if item == items.last {
-                            height = 0
-                        }
-                        return result
-                    }
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > bounds.maxX {
+                currentX = bounds.minX
+                currentY += lineHeight + spacing
+                lineHeight = 0
             }
-        }
-        .background(viewHeightReader($totalHeight))
-    }
-
-    private func viewHeightReader(_ binding: Binding<CGFloat>) -> some View {
-        GeometryReader { geometry -> Color in
-            DispatchQueue.main.async {
-                binding.wrappedValue = geometry.size.height
-            }
-            return Color.clear
+            subview.place(at: CGPoint(x: currentX, y: currentY), proposal: .unspecified)
+            currentX += size.width + spacing
+            lineHeight = max(lineHeight, size.height)
         }
     }
 }
