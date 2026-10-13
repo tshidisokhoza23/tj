@@ -19,6 +19,10 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Inject Dynamic Build Number
+        run: |
+          sed -i '' "s/CURRENT_PROJECT_VERSION: \"1\"/CURRENT_PROJECT_VERSION: \"${{ github.run_number }}\"/g" project.yml
+
       - name: Generate Xcode Project
         run: xcodegen generate --spec project.yml
 
