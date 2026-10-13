@@ -50,7 +50,8 @@ final class VoiceNoteController: NSObject, ObservableObject, AVAudioPlayerDelega
             .appendingPathComponent("VOICE_\(Int(Date().timeIntervalSince1970 * 1000)).m4a")
         let settings: [String: Any] = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 44_100,
+            AVSampleRateKey: 24000.0,
+            AVEncoderBitRateKey: 32000,
             AVNumberOfChannelsKey: 1,
             AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
         ]
