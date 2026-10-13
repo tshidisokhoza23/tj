@@ -8,22 +8,11 @@ public struct AppLogo: View {
     }
 
     public var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.23, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.logoBlueDark, Color.appAccent],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: size, height: size)
-                .shadow(color: Color.appAccent.opacity(0.3), radius: size * 0.08, x: 0, y: size * 0.04)
-
-            Text("TJ")
-                .font(.system(size: size * 0.42, weight: .black, design: .rounded))
-                .foregroundColor(.white)
-        }
+        Image("app_logo")
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
     }
 }
 
