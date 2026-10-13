@@ -313,12 +313,19 @@ public class ChatViewModel: ObservableObject {
     }
 
     public func fetchChats() {
-        uiState.isChatsFetching = true
+        if uiState.chats.data == nil || uiState.chats.data?.isEmpty == true {
+            uiState.isChatsFetching = true
+        }
         Task {
-            if self.uiState.chats.data == nil, let cached = AppDiskCache.loadResponse(path: "conversations", query: nil) {
-                let visible = LiveJSON.chats(from: cached).filter { !$0.isSecretMingleChat }
-                if !visible.isEmpty {
-                    self.uiState.chats = .success(visible)
+            if self.uiState.chats.data == nil {
+                let stored = await AppRuntime.chatRepository.getChats().data ?? []
+                if !stored.isEmpty {
+                    self.uiState.chats = .success(stored)
+                } else if let cached = AppDiskCache.loadResponse(path: "conversations", query: nil) {
+                    let visible = LiveJSON.chats(from: cached).filter { !$0.isSecretMingleChat }
+                    if !visible.isEmpty {
+                        self.uiState.chats = .success(visible)
+                    }
                 }
             }
             do {
