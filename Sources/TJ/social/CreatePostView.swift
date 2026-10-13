@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 enum ReplyAudience: String, CaseIterable, Identifiable {
     case everyone = "Public ▾"
@@ -34,7 +35,10 @@ public struct CreatePostView: View {
     @State private var isScheduled: Bool = false
     @State private var showCollaboratorsSheet: Bool = false
     @State private var collaboratorQuery: String = ""
+    @State private var showGifSheet: Bool = false
+    @State private var gifQuery: String = ""
     @State private var attachedImages: [String] = []
+    @State private var photoItem: PhotosPickerItem?
     @State private var showAiAssistSheet: Bool = false
     @State private var isAiImproved: Bool = false
 
@@ -46,7 +50,7 @@ public struct CreatePostView: View {
 
     private var isValidPost: Bool {
         let trimmed = postText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (!trimmed.isEmpty || !attachedImages.isEmpty) && remainingCharacters >= 0
+        return (!trimmed.isEmpty || !attachedImages.isEmpty || !pollOptions.first!.isEmpty) && remainingCharacters >= 0
     }
 
     private let categoriesList = [
@@ -96,7 +100,7 @@ public struct CreatePostView: View {
                                     alignment: .topLeading
                                 )
 
-                            // Add a mood pill button (compact)
+                            // Add a mood pill button (28pt compact height)
                             Button(action: { showMoodSheet = true }) {
                                 Text(selectedMood.isEmpty ? "Add a mood" : selectedMood)
                                     .font(.caption2)
@@ -104,13 +108,14 @@ public struct CreatePostView: View {
                                     .foregroundColor(AppColors.brandPrimary)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 3)
+                                    .frame(height: 28)
                                     .overlay(Capsule().stroke(AppColors.brandPrimary.opacity(0.6), lineWidth: 1))
                             }
                         }
                     }
                     .padding(.horizontal)
 
-                    // Category Section
+                    // Category Section (Multi-row wrapped grid)
                     VStack(alignment: .leading, spacing: 6) {
                         Text("CATEGORY")
                             .font(.caption2)
@@ -118,28 +123,24 @@ public struct CreatePostView: View {
                             .foregroundColor(.gray)
                             .padding(.horizontal)
 
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 6) {
-                                ForEach(categoriesList, id: \.self) { cat in
-                                    let isSelected = selectedCategory == cat
-                                    Button(action: { selectedCategory = cat }) {
-                                        Text(cat)
-                                            .font(.caption2)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(isSelected ? .white : AppColors.brandPrimary)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 4)
-                                            .frame(height: 30)
-                                            .background {
-                                                if isSelected { AppColors.primaryGradient } else { AppColors.cardDark }
-                                            }
-                                            .cornerRadius(16)
-                                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(isSelected ? Color.clear : AppColors.borderDark, lineWidth: 1))
+                        FlowLayout(data: categoriesList, spacing: 6) { cat in
+                            let isSelected = selectedCategory == cat
+                            Button(action: { selectedCategory = cat }) {
+                                Text(cat)
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(isSelected ? .white : AppColors.brandPrimary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 4)
+                                    .frame(height: 30)
+                                    .background {
+                                        if isSelected { AppColors.primaryGradient } else { AppColors.cardDark }
                                     }
-                                }
+                                    .cornerRadius(16)
+                                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(isSelected ? Color.clear : AppColors.borderDark, lineWidth: 1))
                             }
-                            .padding(.horizontal)
                         }
+                        .padding(.horizontal)
                     }
 
                     // Template Chips
@@ -225,16 +226,20 @@ public struct CreatePostView: View {
                         // Icon Row
                         HStack(spacing: 0) {
                             Group {
-                                Button(action: { attachedImages.append("sample_photo") }) {
+                                PhotosPicker(selection: $photoItem, matching: .images) {
                                     Image(systemName: "photo")
                                 }
                                 Spacer()
-                                Button(action: { attachedImages.append("sample_video") }) {
+                                PhotosPicker(selection: $photoItem, matching: .videos) {
                                     Image(systemName: "video")
                                 }
                                 Spacer()
                                 Button(action: { showPollSheet = true }) {
                                     Image(systemName: "chart.bar")
+                                }
+                                Spacer()
+                                Button(action: { showGifSheet = true }) {
+                                    Text("GIF").font(.caption.bold())
                                 }
                                 Spacer()
                                 Button(action: { showLocationSheet = true }) {
@@ -351,6 +356,20 @@ public struct CreatePostView: View {
                 }
                 .presentationDetents([.height(220)])
             }
+            .sheet(isPresented: $showGifSheet) {
+                NavigationStack {
+                    Form {
+                        TextField("Search GIFs", text: $gifQuery)
+                    }
+                    .navigationTitle("GIFs")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showGifSheet = false }
+                        }
+                    }
+                }
+                .presentationDetents([.height(200)])
+            }
             .sheet(isPresented: $showScheduleSheet) {
                 NavigationStack {
                     VStack(spacing: 16) {
@@ -371,6 +390,27 @@ public struct CreatePostView: View {
                 }
                 .presentationDetents([.height(200)])
             }
+            .sheet(isPresented: $showCollaboratorsSheet) {
+                NavigationStack {
+                    Form {
+                        TextField("Search people", text: $collaboratorQuery)
+                    }
+                    .navigationTitle("Collaborators")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showCollaboratorsSheet = false }
+                        }
+                    }
+                }
+                .presentationDetents([.height(220)])
+            }
+            .onChange(of: photoItem) { newItem in
+                Task {
+                    if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                        attachedImages.append("photo_\(Date().timeIntervalSince1970)")
+                    }
+                }
+            }
         }
     }
 
@@ -389,5 +429,67 @@ public struct CreatePostView: View {
         )
         socialViewModel.posts.insert(newPost, at: 0)
         dismiss()
+    }
+}
+
+// MARK: - FlowLayout Component for Wrapped Category Chips
+
+struct FlowLayout<Data: Collection, Content: View>: View where Data.Element: Hashable {
+    let data: Data
+    let spacing: CGFloat
+    let content: (Data.Element) -> Content
+
+    @State private var totalHeight = CGFloat.zero
+
+    var body: some View {
+        VStack {
+            GeometryReader { geometry in
+                self.generateContent(in: geometry)
+            }
+        }
+        .frame(height: totalHeight)
+    }
+
+    private func generateContent(in g: GeometryProxy) -> some View {
+        var width = CGFloat.zero
+        var height = CGFloat.zero
+
+        return ZStack(alignment: .topLeading) {
+            ForEach(data, id: \.self) { item in
+                self.content(item)
+                    .padding(.trailing, spacing)
+                    .padding(.bottom, spacing)
+                    .alignmentGuide(.leading) { d in
+                        if abs(width - d.width) > g.size.width {
+                            width = 0
+                            height -= d.height + spacing
+                        }
+                        let result = width
+                        if item == data.last {
+                            width = 0
+                        } else {
+                            width -= d.width + spacing
+                        }
+                        return result
+                    }
+                    .alignmentGuide(.top) { _ in
+                        let result = height
+                        if item == data.last {
+                            height = 0
+                        }
+                        return result
+                    }
+            }
+        }
+        .background(viewHeightReader($totalHeight))
+    }
+
+    private func viewHeightReader(_ binding: Binding<CGFloat>) -> some View {
+        GeometryReader { geometry -> Color in
+            DispatchQueue.main.async {
+                binding.wrappedValue = geometry.size.height
+            }
+            return Color.clear
+        }
     }
 }
