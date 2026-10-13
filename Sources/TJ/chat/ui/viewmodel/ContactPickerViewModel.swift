@@ -15,18 +15,41 @@ public class ContactPickerViewModel: ObservableObject {
     }
 
     public func fetchContacts() {
-        contacts = .loading(allContacts)
-        Task { await syncDeviceContacts() }
+        Task {
+            let cachedEntities = await LocalDatabase.shared.getContacts()
+            let cached = cachedEntities.map { entity in
+                Contact(
+                    id: entity.id,
+                    username: entity.username,
+                    displayName: entity.displayName,
+                    avatarUrl: entity.avatarUrl,
+                    phoneNumber: entity.phoneNumber,
+                    isRegistered: entity.isRegistered
+                )
+            }
+            if !cached.isEmpty {
+                self.allContacts = cached
+                self.contacts = .success(cached)
+            } else if self.allContacts.isEmpty {
+                self.contacts = .loading(nil)
+            }
+
+            await syncDeviceContacts()
+        }
     }
 
     private func syncDeviceContacts() async {
         let matched = await ContactSyncManager.shared.syncAccountContacts()
-        allContacts = matched
-        if matched.isEmpty && !ContactSyncManager.shared.canReadContacts() {
-            contacts = .error("Allow contacts, or sign in on a phone that already saved them", allContacts)
-            return
+        if !matched.isEmpty {
+            allContacts = matched
+            contacts = .success(matched)
+        } else if allContacts.isEmpty {
+            if !ContactSyncManager.shared.canReadContacts() {
+                contacts = .error("Allow contacts, or sign in on a phone that already saved them", allContacts)
+            } else {
+                contacts = .success([])
+            }
         }
-        contacts = .success(matched)
     }
 
     public func searchContacts(query: String) {
