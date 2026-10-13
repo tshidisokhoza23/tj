@@ -58,7 +58,8 @@ public struct StoriesHeaderRow: View {
             .padding(.vertical, 8)
         }
         .confirmationDialog("Add Story", isPresented: $showStoryActions, titleVisibility: .visible) {
-            Button("Image & Video", action: onMediaStoryClick)
+            Button("Image story", action: onMediaStoryClick)
+            Button("Video story", action: onMediaStoryClick)
             Button("Text story", action: onTextStoryClick)
             Button("Posted stories", action: onPostedStoriesClick)
             Button("Cancel", role: .cancel) {}
