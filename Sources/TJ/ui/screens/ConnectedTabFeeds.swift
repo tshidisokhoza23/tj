@@ -442,127 +442,143 @@ struct SocialFeedView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Top App Bar matching Screenshot 2
-            HStack {
-                Button(action: { showSocialMenu = true }) {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.primary)
-                }
+        ZStack(alignment: .bottomTrailing) {
+            VStack(spacing: 0) {
+                // Top App Bar matching Screenshot 2
+                HStack {
+                    Button(action: { showSocialMenu = true }) {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.primary)
+                    }
 
-                Spacer()
+                    Spacer()
 
-                AppLogo(size: 36)
+                    AppLogo(size: 36)
 
-                Spacer()
+                    Spacer()
 
-                Button(action: { showSocialSearch = true }) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.primary)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-
-            // Category Sub-Pills Row matching Screenshot 2
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(0..<categories.count, id: \.self) { idx in
-                        let isSelected = selectedCategory == idx
-                        Button(action: {
-                            selectedCategory = idx
-                            posts = []
-                            nextOffset = 0
-                            hasMore = true
-                            Task { await load(reset: true) }
-                        }) {
-                            Text(categories[idx].1)
-                                .font(.system(size: 13, weight: .medium))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 4)
-                                .frame(height: 32)
-                                .foregroundColor(isSelected ? .white : AppColors.tealAccent)
-                                .background {
-                                    if isSelected {
-                                        AppColors.primaryGradient
-                                    } else {
-                                        AppColors.surfaceElevated
-                                    }
-                                }
-                                .cornerRadius(16)
-                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(isSelected ? Color.clear : AppColors.borderDark, lineWidth: 1))
-                        }
+                    Button(action: { showSocialSearch = true }) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.primary)
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 4)
-            }
+                .padding(.vertical, 8)
 
-            Menu {
-                Button("Off") { setQuality("off") }
-                Button("Balanced") { setQuality("balanced") }
-                Button("High quality only") { setQuality("high") }
-                Button("Following only") { setQuality("following") }
-                Button("Topics I follow") { setQuality("topics") }
-                Button("Anti-ragebait filter") { setQuality("calm") }
-            } label: {
-                Text("Quality mode ▾  \(qualityLabel)")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(AppColors.tealAccent)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(AppColors.surfaceElevated)
-                    .clipShape(Capsule())
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 6)
-
-            Divider()
-
-            // Main Posts Feed List
-            Group {
-                if posts.isEmpty {
-                    VStack(spacing: 8) {
-                        ProgressView()
-                        Text(status).font(.subheadline).foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(feedEntries) { entry in
-                                switch entry.kind {
-                                case .post(let post):
-                                    FeedPostCard(
-                                        post: post,
-                                        onOpen: { selectedPost = post },
-                                        onProfile: { onProfileClick(post.authorId) },
-                                        onReply: { selectedPost = post },
-                                        onRepost: { repostTarget = post },
-                                        onLike: { toggleLike(post.id) },
-                                        onSave: { toggleSave(post.id) },
-                                        onShare: { share(post.id) },
-                                        onMore: { moreTarget = post }
-                                    )
-                                    .id(post.id)
-                                case .ad(let slot):
-                                    StableFeedAd(slot: slot)
-                                        .id(slot)
-                                }
-                            }
-                            if hasMore {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .onAppear { Task { await load(reset: false) } }
+                // Category Sub-Pills Row matching Screenshot 2
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(0..<categories.count, id: \.self) { idx in
+                            let isSelected = selectedCategory == idx
+                            Button(action: {
+                                selectedCategory = idx
+                                posts = []
+                                nextOffset = 0
+                                hasMore = true
+                                Task { await load(reset: true) }
+                            }) {
+                                Text(categories[idx].1)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 4)
+                                    .frame(height: 32)
+                                    .foregroundColor(isSelected ? .white : AppColors.brandPrimary)
+                                    .background {
+                                        if isSelected {
+                                            AppColors.primaryGradient
+                                        } else {
+                                            AppColors.cardDark
+                                        }
+                                    }
+                                    .cornerRadius(16)
+                                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(isSelected ? Color.clear : AppColors.borderDark, lineWidth: 1))
                             }
                         }
                     }
-                    .transaction { $0.animation = nil }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
+                }
+
+                Menu {
+                    Button("Off") { setQuality("off") }
+                    Button("Balanced") { setQuality("balanced") }
+                    Button("High quality only") { setQuality("high") }
+                    Button("Following only") { setQuality("following") }
+                    Button("Topics I follow") { setQuality("topics") }
+                    Button("Anti-ragebait filter") { setQuality("calm") }
+                } label: {
+                    Text("Quality mode ▾  \(qualityLabel)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(AppColors.brandPrimary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(AppColors.cardDark)
+                        .cornerRadius(16)
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 6)
+
+                Divider()
+
+                // Main Posts Feed List
+                Group {
+                    if posts.isEmpty {
+                        VStack(spacing: 8) {
+                            ProgressView()
+                            Text(status).font(.subheadline).foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 0) {
+                                ForEach(feedEntries) { entry in
+                                    switch entry.kind {
+                                    case .post(let post):
+                                        FeedPostCard(
+                                            post: post,
+                                            onOpen: { selectedPost = post },
+                                            onProfile: { onProfileClick(post.authorId) },
+                                            onReply: { selectedPost = post },
+                                            onRepost: { repostTarget = post },
+                                            onLike: { toggleLike(post.id) },
+                                            onSave: { toggleSave(post.id) },
+                                            onShare: { share(post.id) },
+                                            onMore: { moreTarget = post }
+                                        )
+                                        .id(post.id)
+                                    case .ad(let slot):
+                                        StableFeedAd(slot: slot)
+                                            .id(slot)
+                                    }
+                                }
+                                if hasMore {
+                                    ProgressView()
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 16)
+                                        .onAppear { Task { await load(reset: false) } }
+                                }
+                            }
+                        }
+                        .transaction { $0.animation = nil }
+                    }
                 }
             }
+
+            // Floating Action Button (FAB) for Create Post
+            Button(action: { showCreatePost = true }) {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(AppColors.primaryGradient)
+                    .clipShape(Circle())
+                    .shadow(radius: 6)
+            }
+            .padding(.trailing, 20)
+            .padding(.bottom, 20)
         }
         .fullScreenCover(isPresented: Binding(get: { selectedPost != nil }, set: { if !$0 { selectedPost = nil } })) {
             if let post = selectedPost {

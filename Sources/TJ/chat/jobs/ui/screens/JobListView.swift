@@ -20,108 +20,98 @@ public struct JobsHomeView: View {
 
     public var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                if searching {
-                    HStack {
-                        TextField("Search jobs", text: $query)
-                            .textFieldStyle(.roundedBorder)
-                            .onChange(of: query) { value in viewModel.search(value) }
-                        Button("Cancel") {
-                            searching = false
-                            query = ""
-                            viewModel.fetchJobs()
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                } else {
-                    HStack {
-                        Button(action: { showMenu = true }) {
-                            Image(systemName: "line.3.horizontal")
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.primary)
-                        }
-                        Spacer()
-                        AppLogo(size: 36)
-                        Spacer()
-                        Button(action: { searching = true }) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.primary)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                }
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(jobCategories, id: \.self) { chip in
-                            let selectedChip = viewModel.feedChip == chip
-                            Button(chip) { viewModel.selectFeedChip(chip) }
-                                .font(.system(size: 13, weight: .medium))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 4)
-                                .frame(height: 32)
-                                .foregroundColor(selectedChip ? .white : AppColors.tealAccent)
-                                .background {
-                                    if selectedChip { AppColors.primaryGradient } else { AppColors.surfaceElevated }
-                                }
-                                .cornerRadius(16)
-                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(selectedChip ? Color.clear : AppColors.borderDark, lineWidth: 1))
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 4)
-                }
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        TextField("Location", text: Binding(get: { viewModel.location }, set: { viewModel.setLocation($0) }))
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 140)
-                        TextField("Min salary", text: Binding(get: { viewModel.salaryMin }, set: { viewModel.setSalaryMin($0) }))
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 110)
-                        ForEach([(0, "Any date"), (1, "24h"), (7, "7 days"), (30, "30 days")], id: \.0) { days, label in
-                            Button(label) { viewModel.setPostedWithinDays(days) }
-                                .font(.system(size: 13, weight: .semibold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .foregroundColor(viewModel.postedWithinDays == days ? .white : AppColors.tealAccent)
-                                .background {
-                                    if viewModel.postedWithinDays == days { AppColors.primaryGradient } else { AppColors.surfaceElevated }
-                                }
-                                .clipShape(Capsule())
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 6)
-                }
-
-                if !viewModel.myJobs.isEmpty {
-                    ForEach(viewModel.myJobs.prefix(5)) { job in
+            ZStack(alignment: .bottomTrailing) {
+                VStack(spacing: 0) {
+                    if searching {
                         HStack {
-                            Text(job.title).lineLimit(1)
-                            Spacer()
-                            Button("Close") { viewModel.closeJob(jobId: job.id) }
-                            Button("Renew") {
-                                Task {
-                                    if let url = await viewModel.renewJob(jobId: job.id), let link = URL(string: url) {
-                                        openURL(link)
-                                    }
-                                }
+                            TextField("Search jobs", text: $query)
+                                .textFieldStyle(.roundedBorder)
+                                .onChange(of: query) { value in viewModel.search(value) }
+                            Button("Cancel") {
+                                searching = false
+                                query = ""
+                                viewModel.fetchJobs()
                             }
                         }
                         .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                    } else {
+                        HStack {
+                            Button(action: { showMenu = true }) {
+                                Image(systemName: "line.3.horizontal")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.primary)
+                            }
+                            Spacer()
+                            AppLogo(size: 36)
+                            Spacer()
+                            Button(action: { searching = true }) {
+                                Image(systemName: "magnifyingglass")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.primary)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
                     }
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(jobCategories, id: \.self) { chip in
+                                let selectedChip = viewModel.feedChip == chip
+                                Button(chip) { viewModel.selectFeedChip(chip) }
+                                    .font(.system(size: 13, weight: .medium))
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 4)
+                                    .frame(height: 32)
+                                    .foregroundColor(selectedChip ? .white : AppColors.brandPrimary)
+                                    .background {
+                                        if selectedChip { AppColors.primaryGradient } else { AppColors.cardDark }
+                                    }
+                                    .cornerRadius(16)
+                                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(selectedChip ? Color.clear : AppColors.borderDark, lineWidth: 1))
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 4)
+                    }
+
+                    if !viewModel.myJobs.isEmpty {
+                        ForEach(viewModel.myJobs.prefix(5)) { job in
+                            HStack {
+                                Text(job.title).lineLimit(1)
+                                Spacer()
+                                Button("Close") { viewModel.closeJob(jobId: job.id) }
+                                Button("Renew") {
+                                    Task {
+                                        if let url = await viewModel.renewJob(jobId: job.id), let link = URL(string: url) {
+                                            openURL(link)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                        }
+                    }
+
+                    JobListView(
+                        jobs: viewModel.jobs.data ?? [],
+                        emptyMessage: viewModel.feedChip == "All" ? "Open roles show up here. Post one from the menu or + button." : "Try another category or check back later."
+                    ) { selected = $0 }
                 }
 
-                JobListView(
-                    jobs: viewModel.jobs.data ?? [],
-                    emptyMessage: viewModel.feedChip == "All" ? "Open roles show up here. Post one from the menu." : "Try another category or check back later."
-                ) { selected = $0 }
+                // Floating Action Button (FAB) for Post Job
+                Button(action: { showPostJob = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(AppColors.primaryGradient)
+                        .clipShape(Circle())
+                        .shadow(radius: 6)
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 20)
             }
             .toolbar(.hidden, for: .navigationBar)
         }

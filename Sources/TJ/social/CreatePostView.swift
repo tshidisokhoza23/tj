@@ -21,6 +21,7 @@ public struct CreatePostView: View {
     @EnvironmentObject var socialViewModel: SocialViewModel
 
     @State private var postText: String = ""
+    @State private var selectedCategory: String = "Technology"
     @State private var selectedAudience: ReplyAudience = .everyone
     @State private var showAudienceSheet: Bool = false
     @State private var attachedImages: [String] = []
@@ -37,6 +38,13 @@ public struct CreatePostView: View {
         let trimmed = postText.trimmingCharacters(in: .whitespacesAndNewlines)
         return (!trimmed.isEmpty || !attachedImages.isEmpty) && remainingCharacters >= 0
     }
+
+    private let categoriesList = [
+        "All", "Technology", "Music", "Gaming",
+        "Sports", "News", "Entertainment", "Art",
+        "Lifestyle", "Business", "Education", "Health",
+        "Food", "Comedy", "Relationships"
+    ]
 
     public init() {}
 
@@ -58,9 +66,9 @@ public struct CreatePostView: View {
 
                     VStack(alignment: .leading, spacing: 8) {
                         TextEditor(text: $postText)
-                            .frame(height: 120)
+                            .frame(height: 100)
                             .font(.body)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                             .scrollContentBackground(.hidden)
                             .background(Color.clear)
                             .overlay(
@@ -80,14 +88,46 @@ public struct CreatePostView: View {
                             Text("Feeling creative ✨")
                                 .font(.caption2)
                                 .fontWeight(.semibold)
-                                .foregroundColor(AppColors.tealAccent)
+                                .foregroundColor(AppColors.brandPrimary)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 3)
-                                .overlay(Capsule().stroke(AppColors.tealAccent, lineWidth: 1))
+                                .overlay(Capsule().stroke(AppColors.brandPrimary, lineWidth: 1))
                         }
                     }
                 }
                 .padding(.horizontal)
+
+                // Category Section
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("CATEGORY")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.gray)
+                        .padding(.horizontal)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(categoriesList, id: \.self) { cat in
+                                let isSelected = selectedCategory == cat
+                                Button(action: { selectedCategory = cat }) {
+                                    Text(cat)
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(isSelected ? .white : AppColors.brandPrimary)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 4)
+                                        .frame(height: 30)
+                                        .background {
+                                            if isSelected { AppColors.primaryGradient } else { AppColors.cardDark }
+                                        }
+                                        .cornerRadius(16)
+                                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(isSelected ? Color.clear : AppColors.borderDark, lineWidth: 1))
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
 
                 // Template Chips (Compact 30pt height)
                 VStack(alignment: .leading, spacing: 4) {
@@ -113,7 +153,7 @@ public struct CreatePostView: View {
                                     Text(label)
                                         .font(.caption2)
                                         .fontWeight(.medium)
-                                        .foregroundColor(AppColors.tealAccent)
+                                        .foregroundColor(AppColors.brandPrimary)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 4)
                                         .frame(height: 30)
@@ -133,11 +173,11 @@ public struct CreatePostView: View {
                             ForEach(attachedImages.indices, id: \.self) { idx in
                                 ZStack(alignment: .topTrailing) {
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(AppColors.tealAccent.opacity(0.15))
+                                        .fill(AppColors.brandPrimary.opacity(0.15))
                                         .frame(width: 90, height: 90)
                                         .overlay(
                                             Image(systemName: "photo.fill")
-                                                .foregroundColor(AppColors.tealAccent)
+                                                .foregroundColor(AppColors.brandPrimary)
                                         )
 
                                     Button(action: { attachedImages.remove(at: idx) }) {
@@ -155,7 +195,7 @@ public struct CreatePostView: View {
 
                 Spacer()
 
-                // Floating Bottom Panel (Dark Translucent)
+                // Floating Bottom Panel
                 VStack(alignment: .leading, spacing: 8) {
                     Button(action: { showAudienceSheet = true }) {
                         HStack(spacing: 6) {
@@ -164,7 +204,7 @@ public struct CreatePostView: View {
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                         }
-                        .foregroundColor(AppColors.tealAccent)
+                        .foregroundColor(AppColors.brandPrimary)
                     }
 
                     Divider().background(AppColors.borderDark)
@@ -198,11 +238,11 @@ public struct CreatePostView: View {
                             Spacer()
                             Button(action: { showAiAssistSheet = true }) {
                                 Image(systemName: "sparkles")
-                                    .foregroundColor(AppColors.tealAccent)
+                                    .foregroundColor(AppColors.brandPrimary)
                             }
                         }
                         .font(.system(size: 18))
-                        .foregroundColor(AppColors.tealAccent)
+                        .foregroundColor(AppColors.brandPrimary)
                     }
                 }
                 .padding()
@@ -218,7 +258,7 @@ public struct CreatePostView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                     }
                 }
 
@@ -228,7 +268,7 @@ public struct CreatePostView: View {
                             Text("\(remainingCharacters)")
                                 .font(.caption)
                                 .fontWeight(.bold)
-                                .foregroundColor(remainingCharacters < 0 ? .red : AppColors.tealAccent)
+                                .foregroundColor(remainingCharacters < 0 ? .red : AppColors.brandPrimary)
                             Text("Draft saved")
                                 .font(.caption2)
                                 .foregroundColor(.gray)
