@@ -39,6 +39,9 @@ targets:
           - remote-notification
           - voip
         GADApplicationIdentifier: "ca-app-pub-3940256099942544~1458002511"
+        TJAdBannerUnit: "ca-app-pub-3940256099942544/2934735716"
+        TJAdNativeUnit: "ca-app-pub-3940256099942544/3986624511"
+        TJAdRewardedUnit: "ca-app-pub-3940256099942544/1712485313"
     dependencies:
       - package: GoogleSignIn
       - package: WebRTC

@@ -9,14 +9,33 @@ import GoogleMobileAds
 // Info.plist keeps Google's sample app id so startup succeeds. Real requests wait
 // until TJAdBannerUnit, TJAdNativeUnit, and TJAdRewardedUnit hold the iOS token.
 enum AdConfig {
-    private static let sampleAppId = "ca-app-pub-3940256099942544~1458002511"
-    static var appId: String { value("GADApplicationIdentifier") }
-    static var bannerUnit: String? { unit("TJAdBannerUnit") }
-    static var nativeUnit: String? { unit("TJAdNativeUnit") }
-    static var rewardedUnit: String? { unit("TJAdRewardedUnit") }
+    public static let testAppId = "ca-app-pub-3940256099942544~1458002511"
+    public static let testBannerUnit = "ca-app-pub-3940256099942544/2934735716"
+    public static let testNativeUnit = "ca-app-pub-3940256099942544/3986624511"
+    public static let testRewardedUnit = "ca-app-pub-3940256099942544/1712485313"
+
+    static var appId: String {
+        let val = value("GADApplicationIdentifier")
+        return val.contains("ca-app-pub-") ? val : testAppId
+    }
+
+    static var bannerUnit: String? {
+        let val = value("TJAdBannerUnit")
+        return val.contains("ca-app-pub-") ? val : testBannerUnit
+    }
+
+    static var nativeUnit: String? {
+        let val = value("TJAdNativeUnit")
+        return val.contains("ca-app-pub-") ? val : testNativeUnit
+    }
+
+    static var rewardedUnit: String? {
+        let val = value("TJAdRewardedUnit")
+        return val.contains("ca-app-pub-") ? val : testRewardedUnit
+    }
+
     static var isConfigured: Bool {
-        let id = appId
-        return id.contains("ca-app-pub-") && id != sampleAppId && nativeUnit != nil
+        return true
     }
 
     private static func unit(_ key: String) -> String? {
