@@ -317,14 +317,16 @@ public class ChatViewModel: ObservableObject {
             uiState.isChatsFetching = true
         }
         Task {
-            if self.uiState.chats.data == nil {
+            if self.uiState.chats.data == nil || self.uiState.chats.data?.isEmpty == true {
                 let stored = await AppRuntime.chatRepository.getChats().data ?? []
                 if !stored.isEmpty {
                     self.uiState.chats = .success(stored)
+                    self.uiState.isChatsFetching = false
                 } else if let cached = AppDiskCache.loadResponse(path: "conversations", query: nil) {
                     let visible = LiveJSON.chats(from: cached).filter { !$0.isSecretMingleChat }
                     if !visible.isEmpty {
                         self.uiState.chats = .success(visible)
+                        self.uiState.isChatsFetching = false
                     }
                 }
             }
@@ -346,6 +348,18 @@ public class ChatViewModel: ObservableObject {
     public func fetchMessages(chatId: String) {
         activeChatId = chatId
         markAsRead(chatId: chatId)
+
+        // Instantly load stored/cached messages for this chat on frame 0
+        Task { [weak self] in
+            guard let self else { return }
+            let stored = await AppRuntime.chatRepository.getMessages(chatId: chatId).data ?? []
+            if !stored.isEmpty {
+                await MainActor.run {
+                    self.uiState.messages = .success(ChatExpiry.dropExpired(stored, chatId: chatId))
+                }
+            }
+        }
+
         livePoll?.cancel()
         livePoll = Task { [weak self] in
             while !Task.isCancelled {
