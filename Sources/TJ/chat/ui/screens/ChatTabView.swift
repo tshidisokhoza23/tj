@@ -314,6 +314,8 @@ public struct ChatTabView: View {
                         stories: storyRepository.userStories,
                         currentUserId: SessionStore.shared.userId,
                         onStoryClick: { activeStory = $0 },
+                        onImageStoryClick: { storyStart = .image },
+                        onVideoStoryClick: { storyStart = .video },
                         onMediaStoryClick: { storyStart = .media },
                         onTextStoryClick: { storyStart = .text },
                         onPostedStoriesClick: { storyStart = .posted }

@@ -4,6 +4,8 @@ public struct StoriesHeaderRow: View {
     public let stories: [UserStory]
     public var currentUserId: String? = nil
     public var onStoryClick: (UserStory) -> Void = { _ in }
+    public var onImageStoryClick: () -> Void = {}
+    public var onVideoStoryClick: () -> Void = {}
     public var onMediaStoryClick: () -> Void = {}
     public var onTextStoryClick: () -> Void = {}
     public var onPostedStoriesClick: () -> Void = {}
@@ -13,6 +15,8 @@ public struct StoriesHeaderRow: View {
         stories: [UserStory],
         currentUserId: String? = nil,
         onStoryClick: @escaping (UserStory) -> Void = { _ in },
+        onImageStoryClick: @escaping () -> Void = {},
+        onVideoStoryClick: @escaping () -> Void = {},
         onMediaStoryClick: @escaping () -> Void = {},
         onTextStoryClick: @escaping () -> Void = {},
         onPostedStoriesClick: @escaping () -> Void = {}
@@ -20,6 +24,8 @@ public struct StoriesHeaderRow: View {
         self.stories = stories
         self.currentUserId = currentUserId
         self.onStoryClick = onStoryClick
+        self.onImageStoryClick = onImageStoryClick
+        self.onVideoStoryClick = onVideoStoryClick
         self.onMediaStoryClick = onMediaStoryClick
         self.onTextStoryClick = onTextStoryClick
         self.onPostedStoriesClick = onPostedStoriesClick
@@ -58,8 +64,8 @@ public struct StoriesHeaderRow: View {
             .padding(.vertical, 8)
         }
         .confirmationDialog("Add Story", isPresented: $showStoryActions, titleVisibility: .visible) {
-            Button("Image story", action: onMediaStoryClick)
-            Button("Video story", action: onMediaStoryClick)
+            Button("Image story", action: { onImageStoryClick() })
+            Button("Video story", action: { onVideoStoryClick() })
             Button("Text story", action: onTextStoryClick)
             Button("Posted stories", action: onPostedStoriesClick)
             Button("Cancel", role: .cancel) {}
