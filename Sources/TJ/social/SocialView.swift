@@ -10,6 +10,11 @@ public struct SocialView: View {
     @State private var selectedCategory: String = "All"
     @State private var selectedQualityMode: String = "Balanced (default)"
 
+    @State private var showContests: Bool = false
+    @State private var showTrending: Bool = false
+    @State private var showCreateContest: Bool = false
+    @State private var activeContestHashtag: String? = nil
+
     public init() {}
 
     private let categories = ["All", "Technology", "Music", "Gaming"]
@@ -45,69 +50,94 @@ public struct SocialView: View {
                     Button(action: {}) {
                         Image(systemName: "magnifyingglass")
                             .font(.title2)
-                            .foregroundColor(AppColors.tealAccent)
+                            .foregroundColor(.white)
                     }
                 }
                 .padding(.horizontal)
-                .padding(.vertical, 10)
+                .padding(.top, 8)
 
-                // Category Pills
+                // Category Chips
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 12) {
                         ForEach(categories, id: \.self) { cat in
-                            let isSelected = selectedCategory == cat
                             Button(action: { selectedCategory = cat }) {
                                 Text(cat)
                                     .font(.subheadline)
                                     .fontWeight(.bold)
-                                    .foregroundColor(isSelected ? .white : AppColors.tealAccent)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 8)
-                                    .background(isSelected ? AnyView(AppColors.primaryGradient) : AnyView(AppColors.cardDark))
+                                    .background(selectedCategory == cat ? AppColors.primaryGradient : LinearGradient(colors: [AppColors.cardDark], startPoint: .leading, endPoint: .trailing))
+                                    .foregroundColor(.white)
                                     .cornerRadius(20)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 20)
-                                            .stroke(isSelected ? Color.clear : AppColors.borderDark, lineWidth: 1)
-                                    )
                             }
                         }
                     }
                     .padding(.horizontal)
+                    .padding(.vertical, 8)
                 }
-                .padding(.vertical, 4)
 
-                // Quality Mode Dropdown Chip
-                HStack {
-                    Menu {
-                        ForEach(qualityOptions, id: \.self) { opt in
-                            Button(action: { selectedQualityMode = opt }) {
-                                HStack {
-                                    Text(opt)
-                                    if selectedQualityMode == opt {
-                                        Image(systemName: "checkmark")
+                // Sub-Bar: Quality, Contests, Trending
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        Menu {
+                            ForEach(qualityOptions, id: \.self) { opt in
+                                Button(action: { selectedQualityMode = opt }) {
+                                    HStack {
+                                        Text(opt)
+                                        if selectedQualityMode == opt {
+                                            Image(systemName: "checkmark")
+                                        }
                                     }
                                 }
                             }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "slider.horizontal.3")
+                                Text("Quality: \(selectedQualityMode) ▾")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(AppColors.cardDark)
+                            .cornerRadius(16)
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
                         }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "slider.horizontal.3")
-                            Text("Quality: \(selectedQualityMode) ▾")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(AppColors.cardDark)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
-                    }
 
-                    Spacer()
+                        // 🏆 Contests Chip Button
+                        Button(action: { showContests = true }) {
+                            HStack(spacing: 4) {
+                                Text("🏆 Contests")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(Color(hex: "60A5FA"))
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color(hex: "2563EB").opacity(0.15))
+                            .cornerRadius(16)
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(hex: "2563EB"), lineWidth: 1))
+                        }
+
+                        // 🔥 Trending Chip Button
+                        Button(action: { showTrending = true }) {
+                            HStack(spacing: 4) {
+                                Text("🔥 Trending")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(Color(hex: "F87171"))
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color(hex: "EF4444").opacity(0.15))
+                            .cornerRadius(16)
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(hex: "EF4444"), lineWidth: 1))
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 4)
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 4)
 
                 // Feed Items
                 ScrollView {
@@ -130,122 +160,88 @@ public struct SocialView: View {
 
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(post.authorName)
-                                                .font(.system(size: 15, weight: .bold))
+                                                .font(.headline)
                                                 .foregroundColor(.white)
-                                            Text(post.timestamp)
-                                                .font(.system(size: 12))
-                                                .foregroundColor(.gray)
+                                            Text("@\(post.authorHandle) • \(post.timeAgo)")
+                                                .font(.caption)
+                                                .foregroundColor(AppColors.greyLight)
                                         }
+
                                         Spacer()
-                                        Button(action: { selectedPostForMenu = post }) {
+
+                                        Button(action: {}) {
                                             Image(systemName: "ellipsis")
-                                                .foregroundColor(.gray)
+                                                .foregroundColor(.white)
                                         }
                                     }
 
                                     // Content Text
-                                    Text(post.textContent)
-                                        .font(.system(size: 15))
+                                    Text(post.content)
+                                        .font(.body)
                                         .foregroundColor(.white)
 
-                                    if post.isAiImproved {
-                                        Text("Improved with AI ✨")
-                                            .font(.caption2)
-                                            .foregroundColor(.gray)
+                                    // Media
+                                    if let mediaUrl = post.mediaUrl {
+                                        AsyncImage(url: URL(string: mediaUrl)) { image in
+                                            image
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(maxHeight: 300)
+                                                .cornerRadius(12)
+                                                .clipped()
+                                        } placeholder: {
+                                            Rectangle()
+                                                .fill(AppColors.greyMedium.opacity(0.3))
+                                                .frame(height: 200)
+                                                .cornerRadius(12)
+                                        }
                                     }
 
-                                    if let _ = post.imageUrl {
-                                        Rectangle()
-                                            .fill(AppColors.primaryGradient.opacity(0.2))
-                                            .frame(height: 200)
-                                            .cornerRadius(12)
-                                            .overlay(
-                                                Image(systemName: "photo.fill")
-                                                    .font(.largeTitle)
-                                                    .foregroundColor(AppColors.tealAccent)
-                                            )
-                                    }
-
-                                    // Engagement Bar
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(spacing: 12) {
-                                            // Reply
-                                            Button(action: { selectedPostForComments = post }) {
-                                                HStack(spacing: 4) {
-                                                    Image(systemName: "bubble.left")
-                                                    Text("\(post.commentsCount)")
-                                                }
-                                                .font(.caption)
-                                                .foregroundColor(AppColors.tealAccent)
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 6)
-                                                .background(AppColors.cardDark)
-                                                .clipShape(Capsule())
-                                            }
-
-                                            // Repost
-                                            Button(action: {}) {
-                                                Image(systemName: "arrow.2.squarepath")
-                                                    .font(.caption)
-                                                    .foregroundColor(AppColors.tealAccent)
-                                                    .padding(.horizontal, 12)
-                                                    .padding(.vertical, 6)
-                                                    .background(AppColors.cardDark)
-                                                    .clipShape(Capsule())
-                                            }
-
-                                            // Like
-                                            Button(action: { socialViewModel.toggleLike(for: post) }) {
-                                                HStack(spacing: 4) {
-                                                    Image(systemName: post.isLiked ? "heart.fill" : "heart")
-                                                        .foregroundColor(post.isLiked ? .red : AppColors.tealAccent)
-                                                    Text("\(post.likesCount)")
-                                                }
-                                                .font(.caption)
-                                                .foregroundColor(post.isLiked ? .red : AppColors.tealAccent)
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 6)
-                                                .background(AppColors.cardDark)
-                                                .clipShape(Capsule())
-                                            }
-
-                                            // Views
+                                    // Action Pills
+                                    HStack(spacing: 12) {
+                                        // Reply
+                                        Button(action: { selectedPostForComments = post }) {
                                             HStack(spacing: 4) {
-                                                Image(systemName: "eye")
-                                                Text("\(post.viewsCount)")
+                                                Image(systemName: "bubble.left")
+                                                Text("Reply \(post.repliesCount)")
                                             }
                                             .font(.caption)
-                                            .foregroundColor(AppColors.tealAccent)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.white)
                                             .padding(.horizontal, 12)
                                             .padding(.vertical, 6)
                                             .background(AppColors.cardDark)
                                             .clipShape(Capsule())
+                                        }
 
-                                            // Bookmark
-                                            Button(action: {}) {
-                                                Image(systemName: "bookmark")
-                                                    .font(.caption)
-                                                    .foregroundColor(AppColors.tealAccent)
-                                                    .padding(.horizontal, 12)
-                                                    .padding(.vertical, 6)
-                                                    .background(AppColors.cardDark)
-                                                    .clipShape(Capsule())
+                                        // Repost
+                                        Button(action: {}) {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "arrow.2.squarepath")
+                                                Text("Repost \(post.repostsCount)")
                                             }
+                                            .font(.caption)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(AppColors.cardDark)
+                                            .clipShape(Capsule())
+                                        }
 
-                                            // Tip
-                                            Button(action: {}) {
-                                                HStack(spacing: 4) {
-                                                    Image(systemName: "dollarsign.circle.fill")
-                                                    Text("Tip 💸")
-                                                }
-                                                .font(.caption)
-                                                .fontWeight(.bold)
-                                                .foregroundColor(AppColors.tealAccent)
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 6)
-                                                .background(AppColors.primaryGradient.opacity(0.3))
-                                                .clipShape(Capsule())
+                                        // Tip
+                                        Button(action: {}) {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "dollarsign.circle.fill")
+                                                Text("Tip 💸")
                                             }
+                                            .font(.caption)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(AppColors.tealAccent)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(AppColors.primaryGradient.opacity(0.3))
+                                            .clipShape(Capsule())
                                         }
                                     }
                                 }
@@ -273,6 +269,45 @@ public struct SocialView: View {
             .sheet(item: $selectedPostForComments) { post in
                 CommentsSheetView(post: post)
             }
+            .fullScreenCover(isPresented: $showContests) {
+                ContestDiscoveryView(
+                    onNavigateBack = { showContests = false },
+                    onSelectContest = { tag in
+                        showContests = false
+                        activeContestHashtag = tag
+                    },
+                    onCreateContestClick = {
+                        showContests = false
+                        showCreateContest = true
+                    }
+                )
+            }
+            .fullScreenCover(isPresented: $showTrending) {
+                TrendingFeedView(
+                    onNavigateBack = { showTrending = false },
+                    onTopicClick = { topic in
+                        showTrending = false
+                        activeContestHashtag = topic
+                    }
+                )
+            }
+            .fullScreenCover(item: Binding(get: { activeContestHashtag.map { StringWrapper(value: $0) } }, set: { activeContestHashtag = $0?.value })) { wrapper in
+                ContestFeedView(hashtag: wrapper.value, onNavigateBack: { activeContestHashtag = nil })
+            }
+            .fullScreenCover(isPresented: $showCreateContest) {
+                CreateContestView(
+                    onNavigateBack = { showCreateContest = false },
+                    onContestCreated = { tag in
+                        showCreateContest = false
+                        activeContestHashtag = tag
+                    }
+                )
+            }
         }
     }
+}
+
+struct StringWrapper: Identifiable {
+    let id = UUID()
+    let value: String
 }
