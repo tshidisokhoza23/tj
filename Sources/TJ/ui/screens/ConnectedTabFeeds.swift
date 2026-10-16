@@ -41,6 +41,7 @@ public struct FeedPost: Identifiable, Codable, Sendable {
     var mood: String
     var aiAssisted: Bool
     var collaboratorCount: Int
+    var isContest: Bool = false
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -1235,6 +1236,14 @@ struct PostActionBar: View {
 
     var body: some View {
         HStack {
+            if post.isContest {
+                ContestVoteButton(initialVotes: max(post.likes, 10))
+                Spacer()
+            }
+
+            CreatorTipButton(postId: post.id, authorId: post.authorId)
+            Spacer()
+
             actionButton(
                 icon: "bubble.left",
                 count: post.repliesCount,
@@ -1277,7 +1286,6 @@ struct PostActionBar: View {
                     .frame(minWidth: 32, minHeight: 32)
             }
             .buttonStyle(.borderless)
-            CreatorTipButton(postId: post.id, authorId: post.authorId)
         }
         .padding(.top, 4)
     }

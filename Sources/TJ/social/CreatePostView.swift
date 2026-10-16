@@ -41,6 +41,9 @@ public struct CreatePostView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var showAiAssistSheet: Bool = false
     @State private var isAiImproved: Bool = false
+    @State private var isContestSelected: Bool = false
+    @State private var contestHashtagInput: String = ""
+    @State private var managerAccessCodeInput: String = ""
 
     private let maxCharacters = 280
 
@@ -374,6 +377,44 @@ public struct CreatePostView: View {
 
             Divider().background(AppColors.borderDark)
 
+            Toggle(isOn: $isContestSelected) {
+                HStack(spacing: 6) {
+                    Text("🏆 Enter Contest / Pageant")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
+            }
+            .tint(AppColors.brandPrimary)
+
+            if isContestSelected {
+                let validHashtags = ["#missthembisa", "#thembisatalent", "#misssoweto", "#gautengpageant", "#missection1"]
+                let cleanTag = contestHashtagInput.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let isValidTag = cleanTag.isEmpty || validHashtags.contains(cleanTag.hasPrefix("#") ? cleanTag : "#\(cleanTag)")
+
+                VStack(alignment: .leading, spacing: 6) {
+                    TextField("Contest Hashtag (e.g. #MissThembisa)", text: $contestHashtagInput)
+                        .padding(10)
+                        .background(AppColors.cardDark)
+                        .cornerRadius(8)
+                        .foregroundColor(.white)
+
+                    if !isValidTag {
+                        Text("Hashtag must match an active contest (e.g. #MissThembisa)")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                    }
+
+                    TextField("Manager Access Code (e.g. MGR-THEMB-1001)", text: $managerAccessCodeInput)
+                        .padding(10)
+                        .background(AppColors.cardDark)
+                        .cornerRadius(8)
+                        .foregroundColor(.white)
+                }
+            }
+
+            Divider().background(AppColors.borderDark)
+
             HStack(spacing: 0) {
                 Group {
                     PhotosPicker(selection: $photoItem, matching: .images) {
@@ -422,17 +463,26 @@ public struct CreatePostView: View {
     }
 
     private func submitPost() {
+        var postTextToSubmit = postText
+        if isContestSelected && !contestHashtagInput.isEmpty {
+            let tag = contestHashtagInput.hasPrefix("#") ? contestHashtagInput : "#\(contestHashtagInput)"
+            if !postTextToSubmit.contains(tag) {
+                postTextToSubmit = postTextToSubmit.isEmpty ? tag : "\(postTextToSubmit) \(tag)"
+            }
+        }
+
         let newPost = SocialPost(
             id: UUID().uuidString,
             authorName: "Alex Morgan",
             authorAvatar: "https://i.pravatar.cc/150?u=usr_1",
             timestamp: "Just now",
-            textContent: postText,
+            textContent: postTextToSubmit,
             imageUrl: attachedImages.isEmpty ? nil : "attached_image",
             likesCount: 0,
             commentsCount: 0,
             isLiked: false,
-            isAiImproved: isAiImproved
+            isAiImproved: isAiImproved,
+            isContest: isContestSelected
         )
         socialViewModel.posts.insert(newPost, at: 0)
         dismiss()

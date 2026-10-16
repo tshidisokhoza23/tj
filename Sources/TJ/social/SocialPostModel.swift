@@ -14,6 +14,7 @@ public struct SocialPost: Identifiable, Codable, Hashable {
     public var isBookmarked: Bool
     public var isAiImproved: Bool
     public var tipCount: Int
+    public var isContest: Bool
 
     public init(
         id: String,
@@ -28,7 +29,8 @@ public struct SocialPost: Identifiable, Codable, Hashable {
         isLiked: Bool,
         isBookmarked: Bool = false,
         isAiImproved: Bool = false,
-        tipCount: Int = 0
+        tipCount: Int = 0,
+        isContest: Bool = false
     ) {
         self.id = id
         self.authorName = authorName
@@ -43,6 +45,7 @@ public struct SocialPost: Identifiable, Codable, Hashable {
         self.isBookmarked = isBookmarked
         self.isAiImproved = isAiImproved
         self.tipCount = tipCount
+        self.isContest = isContest
     }
 }
 

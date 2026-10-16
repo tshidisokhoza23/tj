@@ -199,6 +199,25 @@ public struct SocialView: View {
 
                                     // Action Pills
                                     HStack(spacing: 12) {
+                                        if post.isContest {
+                                            ContestVoteButton(initialVotes: max(post.likesCount, 10))
+                                        }
+
+                                        // Tip 💸 Button (ALWAYS shown)
+                                        Button(action: {}) {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "dollarsign.circle.fill")
+                                                Text("Tip 💸")
+                                            }
+                                            .font(.caption)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(AppColors.tealAccent)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(AppColors.primaryGradient.opacity(0.3))
+                                            .clipShape(Capsule())
+                                        }
+
                                         // Reply
                                         Button(action: { selectedPostForComments = post }) {
                                             HStack(spacing: 4) {
@@ -226,21 +245,6 @@ public struct SocialView: View {
                                             .padding(.horizontal, 12)
                                             .padding(.vertical, 6)
                                             .background(AppColors.cardDark)
-                                            .clipShape(Capsule())
-                                        }
-
-                                        // Tip
-                                        Button(action: {}) {
-                                            HStack(spacing: 4) {
-                                                Image(systemName: "dollarsign.circle.fill")
-                                                Text("Tip 💸")
-                                            }
-                                            .font(.caption)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(AppColors.tealAccent)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(AppColors.primaryGradient.opacity(0.3))
                                             .clipShape(Capsule())
                                         }
                                     }
