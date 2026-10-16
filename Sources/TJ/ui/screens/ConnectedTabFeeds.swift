@@ -1235,75 +1235,58 @@ struct PostActionBar: View {
     var onShare: () -> Void
 
     var body: some View {
-        HStack {
-            if post.isContest {
-                ContestVoteButton(initialVotes: max(post.likes, 10))
-                Spacer()
-            }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                if post.isContest {
+                    ContestVoteButton(initialVotes: max(post.likes, 10))
+                }
 
-            CreatorTipButton(postId: post.id, authorId: post.authorId)
-            Spacer()
+                CreatorTipButton(postId: post.id, authorId: post.authorId)
 
-            actionButton(
-                icon: "bubble.left",
-                count: post.repliesCount,
-                color: .secondary,
-                action: onReply
-            )
-            Spacer()
-            actionButton(
-                icon: "arrow.2.squarepath",
-                count: post.repostCount,
-                color: post.isReposted ? Color(red: 0.00, green: 0.73, blue: 0.49) : .secondary,
-                action: onRepost
-            )
-            Spacer()
-            actionButton(
-                icon: post.isLiked ? "heart.fill" : "heart",
-                count: post.likes,
-                color: post.isLiked ? Color(red: 0.976, green: 0.094, blue: 0.502) : .secondary,
-                action: onLike
-            )
-            Spacer()
-            actionButton(
-                icon: "chart.bar",
-                count: post.views,
-                color: .secondary,
-                action: {}
-            )
-            Spacer()
-            actionButton(
-                icon: post.isBookmarked ? "bookmark.fill" : "bookmark",
-                count: post.quoteCount,
-                color: post.isBookmarked ? Color(red: 0.114, green: 0.608, blue: 0.941) : .secondary,
-                action: onSave
-            )
-            Spacer()
-            Button(action: onShare) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 15))
-                    .foregroundColor(.secondary)
-                    .frame(minWidth: 32, minHeight: 32)
+                PostPill(
+                    iconName: "bubble.left",
+                    text: "Reply \(formatNumber(post.repliesCount))",
+                    action: onReply
+                )
+
+                PostPill(
+                    iconName: "arrow.2.squarepath",
+                    text: "Repost \(formatNumber(post.repostCount))",
+                    selected: post.isReposted,
+                    tint: Color(red: 0.00, green: 0.73, blue: 0.49),
+                    action: onRepost
+                )
+
+                PostPill(
+                    iconName: post.isLiked ? "heart.fill" : "heart",
+                    text: "Like \(formatNumber(post.likes))",
+                    selected: post.isLiked,
+                    tint: Color(red: 0.976, green: 0.094, blue: 0.502),
+                    action: onLike
+                )
+
+                PostPill(
+                    iconName: "chart.bar",
+                    text: "Views \(formatNumber(post.views))",
+                    action: {}
+                )
+
+                PostPill(
+                    iconName: post.isBookmarked ? "bookmark.fill" : "bookmark",
+                    text: post.isBookmarked ? "Saved \(formatNumber(post.quoteCount))" : "Save \(formatNumber(post.quoteCount))",
+                    selected: post.isBookmarked,
+                    tint: Color(red: 0.114, green: 0.608, blue: 0.941),
+                    action: onSave
+                )
+
+                PostPill(
+                    iconName: "square.and.arrow.up",
+                    text: "Share \(formatNumber(post.shares))",
+                    action: onShare
+                )
             }
-            .buttonStyle(.borderless)
         }
         .padding(.top, 4)
-    }
-
-    private func actionButton(icon: String, count: Int, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 15))
-                if count > 0 {
-                    Text(formatNumber(count))
-                        .font(.system(size: 12, weight: .medium))
-                }
-            }
-            .foregroundColor(color)
-            .frame(minWidth: 32, minHeight: 32)
-        }
-        .buttonStyle(.borderless)
     }
 
     private func formatNumber(_ num: Int) -> String {
@@ -1314,6 +1297,7 @@ struct PostActionBar: View {
 }
 
 private struct PostPill: View {
+    let iconName: String?
     let text: String
     var selected: Bool = false
     var tint: Color = .primary
@@ -1321,16 +1305,22 @@ private struct PostPill: View {
 
     var body: some View {
         Button(action: action) {
-            Text(text)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(selected ? tint : .primary)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 36)
-                .background(Color(UIColor.secondarySystemBackground))
-                .clipShape(Capsule())
+            HStack(spacing: 5) {
+                if let iconName, !iconName.isEmpty {
+                    Image(systemName: iconName)
+                        .font(.system(size: 13, weight: .bold))
+                }
+                Text(text)
+                    .font(.system(size: 13, weight: .bold))
+            }
+            .foregroundColor(selected ? tint : .primary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .frame(minHeight: 32)
+            .background(Color(UIColor.secondarySystemBackground))
+            .clipShape(Capsule())
         }
         .buttonStyle(.borderless)
-        .frame(minHeight: 44)
     }
 }
 

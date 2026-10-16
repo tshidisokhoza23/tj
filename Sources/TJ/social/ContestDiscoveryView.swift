@@ -13,6 +13,14 @@ public struct ContestDiscoveryView: View {
     private let accentBlue = Color(hex: "2563EB")
     private let goldYellow = Color(hex: "F59E0B")
 
+    private let topContests = [
+        ("#MissThembisa", "4.2k voters"),
+        ("#ThembisaTalent", "3.8k voters"),
+        ("#ThembisaQueen", "3.1k voters"),
+        ("#MissSoweto", "2.9k voters"),
+        ("#GautengPageant", "2.4k voters")
+    ]
+
     public init(
         onNavigateBack: @escaping () -> Void,
         onSelectContest: @escaping (String) -> Void,
@@ -35,7 +43,7 @@ public struct ContestDiscoveryView: View {
 
                 Spacer()
 
-                Text("Contests & Pageants")
+                Text("Contests & Hashtags")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.white)
 
@@ -100,21 +108,21 @@ public struct ContestDiscoveryView: View {
                         }
                     } else {
                         // Top 20 Carousel
-                        Text("🔥 Top Pageants This Week")
+                        Text("🔥 Top Contests This Week")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
-                                ForEach(1...5, id: \.self) { idx in
-                                    Button(action: { onSelectContest("#MissThembisa") }) {
+                                ForEach(Array(topContests.enumerated()), id: \.element.0) { idx, item in
+                                    Button(action: { onSelectContest(item.0) }) {
                                         VStack(spacing: 8) {
                                             ZStack(alignment: .bottomTrailing) {
                                                 Circle()
                                                     .fill(Color.gray.opacity(0.3))
                                                     .frame(width: 64, height: 64)
 
-                                                Text("\(idx)")
+                                                Text("\(idx + 1)")
                                                     .font(.system(size: 11, weight: .bold))
                                                     .foregroundColor(.black)
                                                     .frame(width: 20, height: 20)
@@ -122,12 +130,12 @@ public struct ContestDiscoveryView: View {
                                                     .clipShape(Circle())
                                             }
 
-                                            Text("#MissThembisa")
+                                            Text(item.0)
                                                 .font(.system(size: 12, weight: .bold))
                                                 .foregroundColor(.white)
                                                 .lineLimit(1)
 
-                                            Text("4.2k voters")
+                                            Text(item.1)
                                                 .font(.system(size: 11))
                                                 .foregroundColor(.gray)
                                         }
