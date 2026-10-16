@@ -11,10 +11,31 @@ public struct CreateContestView: View {
     @State private var generatedCodes: [String] = []
     @State private var isSubmitted: Bool = false
 
-    private let darkBg = Color(hex: "121417")
-    private let darkSurface = Color(hex: "1E2228")
-    private let accentBlue = Color(hex: "2563EB")
-    private let goldYellow = Color(hex: "F59E0B")
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var bgColor: Color {
+        Color(UIColor.systemBackground)
+    }
+
+    private var cardBgColor: Color {
+        Color(UIColor.secondarySystemBackground)
+    }
+
+    private var textColor: Color {
+        .primary
+    }
+
+    private var secondaryTextColor: Color {
+        .secondary
+    }
+
+    private var accentBlue: Color {
+        Color(hex: "2563EB")
+    }
+
+    private var goldYellow: Color {
+        Color(hex: "F59E0B")
+    }
 
     public init(onNavigateBack: @escaping () -> Void, onContestCreated: @escaping (String) -> Void) {
         self.onNavigateBack = onNavigateBack
@@ -28,34 +49,34 @@ public struct CreateContestView: View {
                 Button(action: onNavigateBack) {
                     Image(systemName: "arrow.left")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(textColor)
                 }
 
                 Spacer()
 
                 Text("Host a Pageant / Contest")
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(textColor)
 
                 Spacer()
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(darkBg)
+            .background(bgColor)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if !isSubmitted {
                         TextField("Contest Title (e.g. Miss Thembisa 2026)", text: $title)
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
                             .padding(16)
-                            .background(darkSurface)
+                            .background(cardBgColor)
                             .cornerRadius(12)
 
                         TextField("Custom Hashtag (e.g. #MissThembisa)", text: $hashtag)
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
                             .padding(16)
-                            .background(darkSurface)
+                            .background(cardBgColor)
                             .cornerRadius(12)
                             .onChange(of: hashtag) { val in
                                 let cleaned = val.replacingOccurrences(of: " ", with: "").lowercased()
@@ -64,16 +85,16 @@ public struct CreateContestView: View {
 
                         TextField("Contest Bio & Rules", text: $descriptionText, axis: .vertical)
                             .lineLimit(4...8)
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
                             .padding(16)
-                            .background(darkSurface)
+                            .background(cardBgColor)
                             .cornerRadius(12)
 
                         TextField("Contestant Limit (Default: 20)", text: $participantLimit)
                             .keyboardType(.numberPad)
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
                             .padding(16)
-                            .background(darkSurface)
+                            .background(cardBgColor)
                             .cornerRadius(12)
 
                         Button(action: {
@@ -101,13 +122,13 @@ public struct CreateContestView: View {
 
                         Text("Share these Manager Access Codes with contestant managers. Each code grants 1 verified entry to \(hashtag).")
                             .font(.system(size: 13))
-                            .foregroundColor(.gray)
+                            .foregroundColor(secondaryTextColor)
 
                         ForEach(generatedCodes, id: \.self) { code in
                             HStack {
                                 Text(code)
                                     .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(textColor)
                                 Spacer()
                                 Button(action: {
                                     UIPasteboard.general.string = code
@@ -117,7 +138,7 @@ public struct CreateContestView: View {
                                 }
                             }
                             .padding(12)
-                            .background(darkSurface)
+                            .background(cardBgColor)
                             .cornerRadius(12)
                         }
 
@@ -138,7 +159,7 @@ public struct CreateContestView: View {
                 .padding(16)
             }
         }
-        .background(darkBg.ignoresSafeArea())
+        .background(bgColor.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
     }
 }

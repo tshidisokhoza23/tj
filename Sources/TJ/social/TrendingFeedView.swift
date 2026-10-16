@@ -8,15 +8,15 @@ public struct TrendingFeedView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     private var bgColor: Color {
-        colorScheme == .dark ? Color(hex: "121417") : Color.white
+        Color(UIColor.systemBackground)
     }
 
     private var textColor: Color {
-        colorScheme == .dark ? Color(hex: "F3F4F6") : Color.black
+        .primary
     }
 
     private var dividerColor: Color {
-        colorScheme == .dark ? Color(hex: "22262C") : Color(hex: "EEEEEE")
+        Color(UIColor.separator)
     }
 
     // Dynamic Top 20 Trending Dataset

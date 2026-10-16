@@ -8,10 +8,31 @@ public struct ContestFeedView: View {
         hashtag.hasPrefix("#") ? hashtag : "#\(hashtag)"
     }
 
-    private let darkBg = Color(hex: "121417")
-    private let darkSurface = Color(hex: "1E2228")
-    private let accentBlue = Color(hex: "2563EB")
-    private let goldYellow = Color(hex: "F59E0B")
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var bgColor: Color {
+        Color(UIColor.systemBackground)
+    }
+
+    private var cardBgColor: Color {
+        Color(UIColor.secondarySystemBackground)
+    }
+
+    private var textColor: Color {
+        .primary
+    }
+
+    private var secondaryTextColor: Color {
+        .secondary
+    }
+
+    private var accentBlue: Color {
+        Color(hex: "2563EB")
+    }
+
+    private var goldYellow: Color {
+        Color(hex: "F59E0B")
+    }
 
     public init(hashtag: String, onNavigateBack: @escaping () -> Void) {
         self.hashtag = hashtag
@@ -25,26 +46,26 @@ public struct ContestFeedView: View {
                 Button(action: onNavigateBack) {
                     Image(systemName: "arrow.left")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(textColor)
                 }
 
                 Spacer()
 
                 Text(cleanHashtag)
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(textColor)
 
                 Spacer()
 
                 Button(action: {}) {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(textColor)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(darkBg)
+            .background(bgColor)
 
             ScrollView {
                 VStack(spacing: 16) {
@@ -68,7 +89,7 @@ public struct ContestFeedView: View {
                         }
                     }
                     .padding(16)
-                    .background(darkSurface)
+                    .background(cardBgColor)
                     .cornerRadius(16)
                     .padding(.horizontal, 16)
 
@@ -76,7 +97,7 @@ public struct ContestFeedView: View {
                     HStack {
                         Text("Contestant Submissions")
                             .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
                         Spacer()
                     }
                     .padding(.horizontal, 16)
@@ -89,7 +110,7 @@ public struct ContestFeedView: View {
                 .padding(.vertical, 12)
             }
         }
-        .background(darkBg.ignoresSafeArea())
+        .background(bgColor.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
     }
 
@@ -115,52 +136,64 @@ public struct ContestFeedView: View {
             }
             Text(name)
                 .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(textColor)
                 .padding(.top, 4)
             Text("\(votes) votes")
                 .font(.system(size: 11))
-                .foregroundColor(.gray)
+                .foregroundColor(secondaryTextColor)
         }
     }
 
     private func contestPostCard(rank: Int) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                HStack(spacing: 4) {
-                    Image(systemName: "trophy.fill")
-                        .foregroundColor(goldYellow)
-                        .font(.system(size: 14))
-                    Text("Rank #\(rank)")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(goldYellow)
-                }
-                Spacer()
-                Text("@mgr_thembisa")
-                    .font(.system(size: 12))
-                    .foregroundColor(.gray)
-            }
+        let post = FeedPost(
+            id: "contest_post_\(rank)",
+            authorId: "candidate_\(rank)",
+            authorName: "Candidate #\(rank)",
+            authorHandle: "candidate_\(rank)",
+            authorAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb",
+            content: "Vote for me in \(cleanHashtag)! Representation matters. ✨",
+            mediaURLs: ["https://images.unsplash.com/photo-1534528741775-53994a69daeb"],
+            likes: 1500 - (rank * 110),
+            repliesCount: 12 + rank,
+            postType: "standard",
+            isLiked: false,
+            isBookmarked: false,
+            views: 4200 - (rank * 200),
+            shares: 18 + rank,
+            repostCount: 5 + rank,
+            quoteCount: 0,
+            isReposted: false,
+            mediaType: "image",
+            isVerifiedAuthor: true,
+            timestamp: Int64(Date().timeIntervalSince1970 * 1000),
+            isAuthorFollowed: false,
+            repostOfId: "",
+            originalAuthorId: "",
+            originalAuthorName: "",
+            originalAuthorHandle: "",
+            originalAuthorAvatar: nil,
+            originalContent: "",
+            originalMediaURLs: [],
+            originalMediaType: "",
+            originalPostType: "",
+            latestReplyAuthor: "",
+            latestReplyText: "",
+            mood: "",
+            aiAssisted: false,
+            collaboratorCount: 0,
+            isContest: true
+        )
 
-            Text("Vote for me in \(cleanHashtag)! Representation matters. ✨")
-                .font(.system(size: 14))
-                .foregroundColor(.white)
-
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.gray.opacity(0.3))
-                .frame(height: 280)
-
-            HStack {
-                Text("Candidate #\(rank)")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white)
-
-                Spacer()
-
-                ContestVoteButton(initialVotes: 1500 - (rank * 110))
-            }
-        }
-        .padding(16)
-        .background(darkSurface)
-        .cornerRadius(16)
-        .padding(.horizontal, 16)
+        return FeedPostCard(
+            post: post,
+            onOpen: {},
+            onProfile: {},
+            onReply: {},
+            onRepost: {},
+            onLike: {},
+            onSave: {},
+            onShare: {},
+            onMore: {}
+        )
     }
 }

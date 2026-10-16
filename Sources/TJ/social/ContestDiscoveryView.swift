@@ -8,10 +8,31 @@ public struct ContestDiscoveryView: View {
     @State private var searchQuery: String = ""
     @State private var selectedFilter: String = "Trending"
 
-    private let darkBg = Color(hex: "121417")
-    private let darkSurface = Color(hex: "1E2228")
-    private let accentBlue = Color(hex: "2563EB")
-    private let goldYellow = Color(hex: "F59E0B")
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var bgColor: Color {
+        Color(UIColor.systemBackground)
+    }
+
+    private var cardBgColor: Color {
+        Color(UIColor.secondarySystemBackground)
+    }
+
+    private var textColor: Color {
+        .primary
+    }
+
+    private var secondaryTextColor: Color {
+        .secondary
+    }
+
+    private var accentBlue: Color {
+        Color(hex: "2563EB")
+    }
+
+    private var goldYellow: Color {
+        Color(hex: "F59E0B")
+    }
 
     private let topContests = [
         ("#MissThembisa", "4.2k voters"),
@@ -38,14 +59,14 @@ public struct ContestDiscoveryView: View {
                 Button(action: onNavigateBack) {
                     Image(systemName: "arrow.left")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(textColor)
                 }
 
                 Spacer()
 
                 Text("Contests & Hashtags")
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(textColor)
 
                 Spacer()
 
@@ -57,33 +78,33 @@ public struct ContestDiscoveryView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(darkBg)
+            .background(bgColor)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     // Search Bar
                     HStack {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray)
+                            .foregroundColor(secondaryTextColor)
                         TextField("Search 10k+ contests (e.g., #MissThembisa)", text: $searchQuery)
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
                         if !searchQuery.isEmpty {
                             Button(action: { searchQuery = "" }) {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(secondaryTextColor)
                             }
                         }
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(darkSurface)
+                    .background(cardBgColor)
                     .cornerRadius(24)
 
                     if !searchQuery.isEmpty {
                         // Search Autocomplete Results
                         Text("Search Results")
                             .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
                             .padding(.top, 8)
 
                         ForEach(["#MissThembisa", "#ThembisaTalent", "#ThembisaQueen", "#MissSoweto"], id: \.self) { tag in
@@ -95,22 +116,22 @@ public struct ContestDiscoveryView: View {
                                             .foregroundColor(accentBlue)
                                         Text("Active • 2.8k votes")
                                             .font(.system(size: 12))
-                                            .foregroundColor(.gray)
+                                            .foregroundColor(secondaryTextColor)
                                     }
                                     Spacer()
                                     Text("Ends in 3d")
                                         .font(.system(size: 12))
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(secondaryTextColor)
                                 }
                                 .padding(.vertical, 12)
                             }
-                            Divider().background(darkSurface)
+                            Divider().background(cardBgColor)
                         }
                     } else {
                         // Top 20 Carousel
                         Text("🔥 Top Contests This Week")
                             .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
@@ -132,16 +153,16 @@ public struct ContestDiscoveryView: View {
 
                                             Text(item.0)
                                                 .font(.system(size: 12, weight: .bold))
-                                                .foregroundColor(.white)
+                                                .foregroundColor(textColor)
                                                 .lineLimit(1)
 
                                             Text(item.1)
                                                 .font(.system(size: 11))
-                                                .foregroundColor(.gray)
+                                                .foregroundColor(secondaryTextColor)
                                         }
                                         .padding(12)
                                         .frame(width: 130)
-                                        .background(darkSurface)
+                                        .background(cardBgColor)
                                         .cornerRadius(16)
                                     }
                                     .buttonStyle(.plain)
@@ -155,10 +176,10 @@ public struct ContestDiscoveryView: View {
                                 Button(action: { selectedFilter = filter }) {
                                     Text(filter)
                                         .font(.system(size: 13, weight: .bold))
-                                        .foregroundColor(selectedFilter == filter ? .white : .gray)
+                                        .foregroundColor(selectedFilter == filter ? .white : secondaryTextColor)
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 8)
-                                        .background(selectedFilter == filter ? accentBlue : darkSurface)
+                                        .background(selectedFilter == filter ? accentBlue : cardBgColor)
                                         .cornerRadius(20)
                                 }
                                 .buttonStyle(.plain)
@@ -169,7 +190,7 @@ public struct ContestDiscoveryView: View {
                         // Active Contests Vertical List
                         Text("Active Contests")
                             .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(textColor)
 
                         VStack(spacing: 12) {
                             ForEach(1...10, id: \.self) { index in
@@ -183,15 +204,15 @@ public struct ContestDiscoveryView: View {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(hashtag)
                                                 .font(.system(size: 14, weight: .bold))
-                                                .foregroundColor(.white)
+                                                .foregroundColor(textColor)
                                             Text("20 Contestants • Ends in 3d 14h")
                                                 .font(.system(size: 12))
-                                                .foregroundColor(.gray)
+                                                .foregroundColor(secondaryTextColor)
                                         }
                                         Spacer()
                                     }
                                     .padding(12)
-                                    .background(darkSurface)
+                                    .background(cardBgColor)
                                     .cornerRadius(12)
                                 }
                                 .buttonStyle(.plain)
@@ -202,7 +223,7 @@ public struct ContestDiscoveryView: View {
                 .padding(16)
             }
         }
-        .background(darkBg.ignoresSafeArea())
+        .background(bgColor.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
     }
 }
