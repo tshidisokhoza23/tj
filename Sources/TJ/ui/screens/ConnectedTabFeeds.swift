@@ -3018,46 +3018,11 @@ private struct HashtagText: View {
 private struct HashtagResultsSheet: View {
     let tag: String
     @Environment(\.dismiss) private var dismiss
-    @State private var posts: [FeedPost] = []
-    @State private var note = "Searching posts and shorts..."
 
     var body: some View {
-        NavigationStack {
-            List(posts) { post in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(post.authorName.isEmpty ? "Post" : post.authorName).font(.headline)
-                    Text(post.content).font(.subheadline).foregroundColor(.secondary).lineLimit(3)
-                }
-            }
-            .overlay { if posts.isEmpty { Text(note).foregroundColor(.secondary).padding() } }
-            .navigationTitle("#\(tag)")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Follow") { Task { await followTopic() } }
-                }
-            }
-            .task { await load() }
-        }
+        ContestFeedView(hashtag: "#\(tag)", onNavigateBack: { dismiss() })
     }
-
-    private func followTopic() async {
-        let current = (try? await API.data("topics")).flatMap { data in
-            (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["followed"] as? [String]
-        } ?? []
-        var topics = current
-        if !topics.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) {
-            topics.append(tag)
-        }
-        _ = try? await API.data("topics", method: "PUT", json: ["topics": topics])
-        await MainActor.run { note = "Following #\(tag). Quality mode uses this list." }
-    }
-
-    private func load() async {
-        do {
-            let data = try await API.data("posts", query: ["hashtag": tag, "page": "1"])
-            let parsed = LiveJSON.posts(from: data)
-            posts = parsed.isEmpty ? FeedPost.decodeList(data) : parsed
+}
             note = posts.isEmpty ? "No posts use #\(tag) yet." : ""
         } catch {
             note = "Could not search #\(tag)"
