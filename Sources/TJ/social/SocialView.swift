@@ -181,19 +181,23 @@ public struct SocialView: View {
                                         .foregroundColor(.white)
 
                                     // Media
-                                    if let mediaUrl = post.mediaUrl {
-                                        AsyncImage(url: URL(string: mediaUrl)) { image in
-                                            image
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(maxHeight: 300)
-                                                .cornerRadius(12)
-                                                .clipped()
-                                        } placeholder: {
-                                            Rectangle()
-                                                .fill(AppColors.greyMedium.opacity(0.3))
-                                                .frame(height: 200)
-                                                .cornerRadius(12)
+                                    if let mediaUrl = post.mediaUrl, let url = URL(string: mediaUrl) {
+                                        if mediaUrl.hasSuffix(".mp4") || mediaUrl.contains("video") {
+                                            FeedVideoPlayerView(url: url)
+                                        } else {
+                                            AsyncImage(url: url) { image in
+                                                image
+                                                    .resizable()
+                                                    .aspectRatio(contentMode: .fill)
+                                                    .frame(maxHeight: 300)
+                                                    .cornerRadius(12)
+                                                    .clipped()
+                                            } placeholder: {
+                                                Rectangle()
+                                                    .fill(AppColors.greyMedium.opacity(0.3))
+                                                    .frame(height: 200)
+                                                    .cornerRadius(12)
+                                            }
                                         }
                                     }
 
@@ -264,6 +268,19 @@ public struct SocialView: View {
                     }
                     .padding(.bottom, 80)
                 }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                Button(action: { showingCreatePost = true }) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(AppColors.primaryGradient)
+                        .clipShape(Circle())
+                        .shadow(color: Color.black.opacity(0.35), radius: 6, x: 0, y: 3)
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 24)
             }
             .background(AppColors.darkCharcoal.ignoresSafeArea())
             .navigationBarHidden(true)
