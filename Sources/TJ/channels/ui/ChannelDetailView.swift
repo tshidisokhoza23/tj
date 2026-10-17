@@ -31,6 +31,8 @@ public struct ChannelDetailView: View {
     @State private var hideMutePrompt = false
     @State private var channelPhoto: PhotosPickerItem?
     @State private var avatarPhoto: PhotosPickerItem?
+    @State private var pendingChannelMediaURL: URL? = nil
+    @State private var pendingIsVideo: Bool = false
     @StateObject private var liveModel = ChannelDetailViewModel()
 
     private var shownChannel: Channel { liveModel.channel.data ?? channel }
@@ -557,6 +559,34 @@ public struct ChannelDetailView: View {
         } message: {
             Text(liveModel.toast ?? "")
         }
+        .overlay {
+            if let pendingChannelMediaURL {
+                MediaEditorOverlay(
+                    mediaURL: pendingChannelMediaURL,
+                    isVideo: pendingIsVideo,
+                    onDismiss = {
+                        self.pendingChannelMediaURL = nil
+                    },
+                    onSend = { editedURL, caption in
+                        Task {
+                            defer { self.pendingChannelMediaURL = nil }
+                            if let data = try? Data(contentsOf: editedURL) {
+                                let ext = pendingIsVideo ? "mp4" : "jpg"
+                                let mime = pendingIsVideo ? "video/mp4" : "image/jpeg"
+                                let filename = "channel_\(Date().timeIntervalSince1970).\(ext)"
+                                if let url = try? await MediaActions.upload(data: data, filename: filename, mime: mime, folder: "channels") {
+                                    let target = shownChannel.conversationId?.isEmpty == false ? shownChannel.conversationId! : shownChannel.id
+                                    let finalCaption = caption.isEmpty ? postText.trimmingCharacters(in: .whitespacesAndNewlines) : caption
+                                    let msgType = pendingIsVideo ? "video" : "image"
+                                    liveModel.sendMediaPost(channelId: target, content: finalCaption, mediaUrls: [url], messageType: msgType, fileName: filename)
+                                    postText = ""
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+        }
     }
     private func shareChannelToStatus() {
         Task {
@@ -584,15 +614,16 @@ public struct ChannelDetailView: View {
 
     private func uploadChannelPhoto(_ item: PhotosPickerItem) async {
         defer { channelPhoto = nil }
-        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
-        do {
-            let url = try await MediaActions.upload(data: data, filename: "channel.jpg", mime: "image/jpeg", folder: "channels")
-            let target = shownChannel.conversationId?.isEmpty == false ? shownChannel.conversationId! : shownChannel.id
-            let caption = postText.trimmingCharacters(in: .whitespacesAndNewlines)
-            liveModel.sendMediaPost(channelId: target, content: caption, mediaUrls: [url], messageType: "image", fileName: "channel.jpg")
-            postText = ""
-        } catch {
-            liveModel.toast = error.localizedDescription
+        let type = item.supportedContentTypes.first
+        let mime = type?.preferredMIMEType ?? ""
+        let isVid = mime.hasPrefix("video")
+        guard let data = try? await item.loadTransferable(type: Data.self), !data.isEmpty else { return }
+        let ext = isVid ? "mp4" : "jpg"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("channel_media_\(Date().timeIntervalSince1970).\(ext)")
+        try? data.write(to: tempURL)
+        await MainActor.run {
+            self.pendingIsVideo = isVid
+            self.pendingChannelMediaURL = tempURL
         }
     }
 

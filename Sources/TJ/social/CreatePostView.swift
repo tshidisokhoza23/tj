@@ -39,6 +39,8 @@ public struct CreatePostView: View {
     @State private var gifQuery: String = ""
     @State private var attachedImages: [String] = []
     @State private var photoItem: PhotosPickerItem?
+    @State private var pendingEditorURL: URL? = nil
+    @State private var pendingIsVideo: Bool = false
     @State private var showAiAssistSheet: Bool = false
     @State private var isAiImproved: Bool = false
     @State private var isContestSelected: Bool = false
@@ -211,10 +213,38 @@ public struct CreatePostView: View {
                 .presentationDetents([.height(220)])
             }
             .onChange(of: photoItem) { newItem in
+                guard let newItem else { return }
                 Task {
-                    if let _ = try? await newItem?.loadTransferable(type: Data.self) {
-                        attachedImages.append("photo_\(Date().timeIntervalSince1970)")
+                    let type = newItem.supportedContentTypes.first
+                    let mime = type?.preferredMIMEType ?? ""
+                    let isVid = mime.hasPrefix("video")
+                    if let data = try? await newItem.loadTransferable(type: Data.self), !data.isEmpty {
+                        let ext = isVid ? "mp4" : "jpg"
+                        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("post_media_\(Date().timeIntervalSince1970).\(ext)")
+                        try? data.write(to: tempURL)
+                        await MainActor.run {
+                            self.pendingIsVideo = isVid
+                            self.pendingEditorURL = tempURL
+                        }
                     }
+                }
+            }
+            .overlay {
+                if let pendingEditorURL {
+                    MediaEditorOverlay(
+                        mediaURL: pendingEditorURL,
+                        isVideo: pendingIsVideo,
+                        onDismiss = {
+                            self.pendingEditorURL = nil
+                        },
+                        onSend = { editedURL, caption in
+                            if !caption.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && postText.isEmpty {
+                                postText = caption
+                            }
+                            attachedImages.append(editedURL.absoluteString)
+                            self.pendingEditorURL = nil
+                        }
+                    )
                 }
             }
         }

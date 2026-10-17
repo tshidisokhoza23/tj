@@ -130,8 +130,7 @@ struct NewStoryScreen: View {
     @State private var isVideo = false
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+        Group {
             if let editorMediaURL {
                 MediaEditorOverlay(
                     mediaURL: editorMediaURL,
@@ -148,8 +147,6 @@ struct NewStoryScreen: View {
                         onNext(ShareDraft(content: caption, type: mediaType, data: data, filename: filename, mime: mime))
                     }
                 )
-            } else {
-                ProgressView().tint(.white)
             }
         }
         .photosPicker(isPresented: $showPicker, selection: $pickerItem, matching: filter)
