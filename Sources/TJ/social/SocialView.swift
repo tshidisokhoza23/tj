@@ -159,19 +159,35 @@ public struct SocialView: View {
                                         }
 
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text(post.authorName)
-                                                .font(.headline)
-                                                .foregroundColor(.white)
-                                            Text("@\(post.authorHandle) • \(post.timeAgo)")
+                                            HStack(spacing: 6) {
+                                                Text(post.authorName)
+                                                    .font(.headline)
+                                                    .foregroundColor(.white)
+                                                Text("• \(post.timeAgo)")
+                                                    .font(.caption)
+                                                    .foregroundColor(AppColors.greyLight)
+                                            }
+                                            Text("@\(post.authorHandle)")
                                                 .font(.caption)
                                                 .foregroundColor(AppColors.greyLight)
                                         }
 
                                         Spacer()
 
-                                        Button(action: {}) {
-                                            Image(systemName: "ellipsis")
-                                                .foregroundColor(.white)
+                                        HStack(spacing: 8) {
+                                            Button(action: {}) {
+                                                Text("+ Follow")
+                                                    .font(.system(size: 11, weight: .medium))
+                                                    .foregroundColor(.white)
+                                                    .padding(.horizontal, 8)
+                                                    .padding(.vertical, 3)
+                                                    .overlay(Capsule().stroke(Color.gray.opacity(0.4), lineWidth: 0.8))
+                                            }
+
+                                            Button(action: {}) {
+                                                Image(systemName: "ellipsis")
+                                                    .foregroundColor(.white)
+                                            }
                                         }
                                     }
 
@@ -201,13 +217,13 @@ public struct SocialView: View {
                                         }
                                     }
 
-                                    // Action Pills
-                                    HStack(spacing: 12) {
+                                    // Action Pills (Clean Borderless Style)
+                                    HStack(spacing: 16) {
                                         if post.isContest {
                                             ContestVoteButton(initialVotes: max(post.likesCount, 10))
                                         }
 
-                                        // Tip 💸 Button (ALWAYS shown)
+                                        // Tip 💸 Button
                                         Button(action: {}) {
                                             HStack(spacing: 4) {
                                                 Image(systemName: "dollarsign.circle.fill")
@@ -216,10 +232,6 @@ public struct SocialView: View {
                                             .font(.caption)
                                             .fontWeight(.bold)
                                             .foregroundColor(AppColors.tealAccent)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(AppColors.primaryGradient.opacity(0.3))
-                                            .clipShape(Capsule())
                                         }
 
                                         // Reply
@@ -229,12 +241,8 @@ public struct SocialView: View {
                                                 Text("Reply \(post.repliesCount)")
                                             }
                                             .font(.caption)
-                                            .fontWeight(.bold)
+                                            .fontWeight(.medium)
                                             .foregroundColor(.white)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(AppColors.cardDark)
-                                            .clipShape(Capsule())
                                         }
 
                                         // Repost
@@ -244,12 +252,8 @@ public struct SocialView: View {
                                                 Text("Repost \(post.repostsCount)")
                                             }
                                             .font(.caption)
-                                            .fontWeight(.bold)
+                                            .fontWeight(.medium)
                                             .foregroundColor(.white)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(AppColors.cardDark)
-                                            .clipShape(Capsule())
                                         }
                                     }
                                 }
@@ -258,6 +262,8 @@ public struct SocialView: View {
                                 .cornerRadius(16)
                                 .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColors.borderDark, lineWidth: 1))
                                 .padding(.horizontal)
+
+                                Divider().opacity(0.15).padding(.horizontal)
 
                                 if index % 3 == 0, let ad = AdItem.samples.first {
                                     AdCardView(ad: ad)
