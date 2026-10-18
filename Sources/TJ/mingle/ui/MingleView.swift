@@ -535,23 +535,17 @@ public struct MingleView: View {
 
     private func saveMe() async {
         let name = myName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else {
-            note = "Please enter your preferred Mingle display name"
-            showProfileSheet = true
-            return
-        }
-        guard let age = Int(myAge), (18...120).contains(age) else {
-            note = "Enter an age from 18 to 120"
-            showProfileSheet = true
-            return
-        }
-        guard !myBio.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            note = "About Me / Bio is required"
-            showProfileSheet = true
-            return
-        }
-        guard hasPhoto else {
-            note = "At least 1 profile photo is required"
+        let age = Int(myAge) ?? 0
+        let bio = myBio.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var missing: [String] = []
+        if name.isEmpty { missing.append("Display Name") }
+        if !(18...120).contains(age) { missing.append("Your Age (must be 18-120)") }
+        if bio.isEmpty { missing.append("Bio / About Me") }
+        if !hasPhoto { missing.append("At least 1 Photo") }
+
+        if !missing.isEmpty {
+            note = "Please complete: " + missing.joined(separator: ", ")
             showProfileSheet = true
             return
         }
@@ -792,6 +786,20 @@ public struct CandidateCardView: View {
         VStack(spacing: 0) {
             ZStack(alignment: .bottomLeading) {
                 photo
+                if profile.photos.count > 1 {
+                    VStack {
+                        HStack(spacing: 4) {
+                            ForEach(0..<profile.photos.count, id: \.self) { idx in
+                                Capsule()
+                                    .fill(idx == photoIndex ? Color.white : Color.white.opacity(0.4))
+                                    .frame(height: 3)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        Spacer()
+                    }
+                }
                 LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .center, endPoint: .bottom)
                 VStack(alignment: .leading, spacing: 4) {
                     Button(action: onPreview) {
@@ -832,7 +840,8 @@ public struct CandidateCardView: View {
 
     private var cardTitle: String {
         var parts: [String] = []
-        if !profile.name.isEmpty { parts.append(profile.name) }
+        let displayName = profile.name.isEmpty ? "Mingle Candidate" : profile.name
+        parts.append(displayName)
         if profile.age > 0 { parts.append("\(profile.age)") }
         if profile.distanceKm > 0 { parts.append(String(format: "%.0f km", profile.distanceKm)) }
         return parts.joined(separator: ", ")
