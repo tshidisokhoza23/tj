@@ -289,6 +289,9 @@ struct MingleActivityPreview: View {
     var onOpenChat: (String, String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var matched: Bool
+    @State private var showMatchOverlay: Bool = false
+    @State private var matchConversationId: String? = nil
+    @State private var photoIndex: Int = 0
     @State private var note = ""
 
     init(item: MingleActivityItem, onOpenChat: @escaping (String, String) -> Void) {
@@ -297,26 +300,215 @@ struct MingleActivityPreview: View {
         _matched = State(initialValue: item.isMatch)
     }
 
+    private var photos: [String] {
+        var list: [String] = []
+        if !item.avatarURL.isEmpty { list.append(item.avatarURL) }
+        if !item.photoURL.isEmpty && item.photoURL != item.avatarURL { list.append(item.photoURL) }
+        return list
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(matched ? "Matched! You both like each other!" : item.actionText)
-                .font(.headline)
-            Text(item.actorName).font(.title2.bold())
-            Text(item.timeAgo).foregroundColor(.secondary)
-            if matched || !item.conversationId.isEmpty {
-                Button("Send Message") { Task { await openChat() } }
-                    .buttonStyle(.borderedProminent)
-            } else if !item.actorId.isEmpty {
-                Button("Like Back") { Task { await likeBack() } }
-                    .buttonStyle(.borderedProminent)
-                Button("Pass") { dismiss() }
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Photo Area with Top Overlay & Bottom Details
+                ZStack(alignment: .bottomLeading) {
+                    currentPhoto
+                        .onTapGesture { location in
+                            guard photos.count > 1 else { return }
+                            if location.x < 150 {
+                                if photoIndex > 0 { photoIndex -= 1 }
+                            } else {
+                                if photoIndex < photos.count - 1 { photoIndex += 1 }
+                            }
+                        }
+
+                    // Top Gradient & Banner
+                    VStack {
+                        if photos.count > 1 {
+                            HStack(spacing: 4) {
+                                ForEach(0..<photos.count, id: \.self) { idx in
+                                    Capsule()
+                                        .fill(idx == photoIndex ? Color.white : Color.white.opacity(0.4))
+                                        .frame(height: 3)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
+                        }
+
+                        HStack {
+                            Image(systemName: matched ? "heart.fill" : "bell.fill")
+                                .foregroundColor(.white)
+                            Text(matched ? "Matched! You both like each other! 🎉" : item.actionText)
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                            Spacer()
+                            Button(action: { dismiss() }) {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(6)
+                                    .background(Color.black.opacity(0.5))
+                                    .clipShape(Circle())
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(matched ? Color.blue.opacity(0.9) : Color.pink.opacity(0.9))
+                        .cornerRadius(20)
+                        .padding(.horizontal, 16)
+                        .padding(.top, photos.count > 1 ? 8 : 16)
+
+                        Spacer()
+                    }
+
+                    // Bottom Details Gradient & Controls
+                    LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .center, endPoint: .bottom)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 6) {
+                            Text(item.actorName.isEmpty ? "Mingle Candidate" : item.actorName)
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.white)
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(.blue)
+                        }
+
+                        Text(item.timeAgo)
+                            .font(.system(size: 13))
+                            .foregroundColor(.white.opacity(0.8))
+
+                        if !note.isEmpty {
+                            Text(note)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.yellow)
+                                .padding(.top, 2)
+                        }
+                    }
+                    .padding(20)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 24))
+                .padding(.horizontal, 12)
+                .padding(.top, 12)
+
+                // Bottom Action Buttons Bar
+                HStack(spacing: 16) {
+                    if !matched {
+                        Button(action: { dismiss() }) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(width: 52, height: 52)
+                                .background(Color.white.opacity(0.25))
+                                .clipShape(Circle())
+                        }
+
+                        Button(action: { Task { await likeBack() } }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "heart.fill")
+                                Text("Like Back ❤️")
+                                    .font(.system(size: 15, weight: .bold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(Color.pink)
+                            .clipShape(Capsule())
+                        }
+                    } else {
+                        Button(action: { Task { await openChat() } }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "bubble.left.fill")
+                                Text("Send Message 💬")
+                                    .font(.system(size: 16, weight: .bold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(Color.blue)
+                            .clipShape(Capsule())
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
-            if !note.isEmpty {
-                Text(note).font(.caption).foregroundColor(.secondary)
+
+            // Match Celebration Overlay
+            if showMatchOverlay && matched {
+                ZStack {
+                    Color.black.opacity(0.92).ignoresSafeArea()
+                    VStack(spacing: 20) {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 72))
+                            .foregroundColor(.pink)
+
+                        Text("IT'S A MATCH!")
+                            .font(.system(size: 28, weight: .black))
+                            .foregroundColor(.white)
+
+                        Text("You and \(item.actorName) liked each other!")
+                            .font(.system(size: 15))
+                            .foregroundColor(.white.opacity(0.85))
+                            .multilineTextAlignment(.center)
+
+                        Button(action: {
+                            dismiss()
+                            if let cid = matchConversationId, !cid.isEmpty {
+                                onOpenChat(cid, item.actorName)
+                            } else {
+                                Task { await openChat() }
+                            }
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "bubble.left.fill")
+                                Text("Send Message")
+                                    .font(.system(size: 16, weight: .bold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color.pink)
+                            .clipShape(Capsule())
+                        }
+                        .padding(.top, 16)
+
+                        Button("Keep Browsing") {
+                            showMatchOverlay = false
+                        }
+                        .foregroundColor(.white.opacity(0.7))
+                        .font(.system(size: 14, weight: .medium))
+                    }
+                    .padding(32)
+                }
             }
-            Spacer()
         }
-        .padding()
+    }
+
+    private var currentPhoto: some View {
+        let photoUrl = photos.indices.contains(photoIndex) ? photos[photoIndex] : photos.first ?? ""
+        return Group {
+            if let resolved = FeedPost.resolve(photoUrl) {
+                AsyncImage(url: resolved) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Color.gray.opacity(0.3)
+                }
+            } else {
+                ZStack {
+                    LinearGradient(colors: [Color.pink.opacity(0.8), Color.purple.opacity(0.9)], startPoint: .top, endPoint: .bottom)
+                    Text(item.actorName.prefix(1).uppercased())
+                        .font(.system(size: 64, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
     }
 
     private func likeBack() async {
@@ -334,11 +526,14 @@ struct MingleActivityPreview: View {
             let json = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
             if json["matched"] as? Bool == true {
                 matched = true
-                note = "It's a Match with \(item.actorName)"
+                showMatchOverlay = true
+                note = "It's a Match with \(item.actorName)! 🎉"
                 let conversationId = LiveJSON.string(json["conversation_id"])
                 if !conversationId.isEmpty {
-                    onOpenChat(conversationId, item.actorName)
+                    matchConversationId = conversationId
                 }
+            } else {
+                note = "Liked \(item.actorName)!"
             }
         } catch {
             note = MingleCopy.serverMessage(error)
@@ -346,6 +541,10 @@ struct MingleActivityPreview: View {
     }
 
     private func openChat() async {
+        if let cid = matchConversationId, !cid.isEmpty {
+            onOpenChat(cid, item.actorName)
+            return
+        }
         if !item.conversationId.isEmpty {
             onOpenChat(item.conversationId, item.actorName)
             return
