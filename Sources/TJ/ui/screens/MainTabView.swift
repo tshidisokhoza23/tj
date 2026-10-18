@@ -382,7 +382,7 @@ public struct MoreShortcutsSheetView: View {
         (.wallet, "Wallet", "creditcard.fill", Color(red: 1.0, green: 0.8, blue: 0.4), true),
         (.files, "Files", "folder.fill", Color.yellow, true),
         (.calendar, "Calendar", "calendar", Color.pink, true),
-        (.vocab, "Vocab (Soon)", "book.fill", Color.gray.opacity(0.3), false),
+        (.vocab, "Vocab", "book.fill", Color.blue, true),
         (.stream, "Stream", "music.note", Color.purple, true),
         (.ride, "Ride", "car.fill", Color.green, true)
     ]
