@@ -247,11 +247,16 @@ public struct MingleView: View {
                 onPhoto: { data in Task { await uploadPhoto(data) } },
                 onDelete: { id in Task { await deletePhoto(id) } },
                 onSave: {
-                    showProfileSheet = false
-                    Task { await saveMe() }
+                    Task {
+                        await saveMe()
+                        if isProfileComplete {
+                            showProfileSheet = false
+                        }
+                    }
                 }
             )
             .presentationDetents([.large])
+            .interactiveDismissDisabled(!isProfileComplete)
         }
         .onReceive(NotificationCenter.default.publisher(for: TJEvents.openMingle)) { _ in
             showSecretChats = true
@@ -302,6 +307,13 @@ public struct MingleView: View {
     }
 
     private var hasPhoto: Bool { myPhotos.contains { !$0.isEmpty } }
+
+    private var isProfileComplete: Bool {
+        hasPhoto &&
+        !myName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        (Int(myAge) ?? 0) >= 18 &&
+        !myBio.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     private var emptyDeck: some View {
         let copy = MingleCopy.emptyDeck(reason: emptyReason, radiusKm: Int(selectedRadiusKm), denied: locationDenied)
@@ -533,6 +545,16 @@ public struct MingleView: View {
             showProfileSheet = true
             return
         }
+        guard !myBio.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            note = "About Me / Bio is required"
+            showProfileSheet = true
+            return
+        }
+        guard hasPhoto else {
+            note = "At least 1 profile photo is required"
+            showProfileSheet = true
+            return
+        }
         do {
             _ = try await API.data("mingle/me", method: "PUT", json: [
                 "name": name,
@@ -611,6 +633,9 @@ public struct MingleView: View {
         if let photos = profile["photos"] as? [[String: Any]] {
             myPhotos = photos.map { LiveJSON.string($0["url"]) }.filter { !$0.isEmpty }
             myPhotoIds = photos.map { LiveJSON.string($0["id"]) }
+        }
+        if !isProfileComplete {
+            showProfileSheet = true
         }
     }
 
