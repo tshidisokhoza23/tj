@@ -1,392 +1,656 @@
 import SwiftUI
-
-// MARK: - Drive Models
-
-public struct DriveFileItem: Identifiable, Hashable {
-    public let id: String
-    public let name: String
-    public let sizeFormatted: String
-    public let updatedDate: String
-    public let isFolder: Bool
-    public let fileExtension: String
-    public var isStarred: Bool
-    public var iconName: String {
-        if isFolder { return "folder.fill" }
-        switch fileExtension.lowercased() {
-        case "pdf": return "doc.fill"
-        case "jpg", "png", "jpeg": return "photo.fill"
-        case "mp4", "mov": return "film.fill"
-        case "mp3", "wav": return "music.note"
-        case "zip", "tar": return "archivebox.fill"
-        default: return "doc.text.fill"
-        }
-    }
-
-    public init(id: String, name: String, sizeFormatted: String, updatedDate: String, isFolder: Bool = false, fileExtension: String = "", isStarred: Bool = false) {
-        self.id = id
-        self.name = name
-        self.sizeFormatted = sizeFormatted
-        self.updatedDate = updatedDate
-        self.isFolder = isFolder
-        self.fileExtension = fileExtension
-        self.isStarred = isStarred
-    }
-}
-
-// MARK: - DriveView
+import MapKit
 
 public struct DriveView: View {
-    @State private var searchText: String = ""
-    @State private var selectedFilter: DriveFilter = .all
-    @State private var isGridView: Bool = false
-    @State private var showUploadSheet: Bool = false
-    @State private var showNewFolderAlert: Bool = false
-    @State private var newFolderName: String = ""
-    @State private var selectedFileForDetails: DriveFileItem? = nil
-    @State private var renameTarget: DriveFileItem?
-    @State private var renameText = ""
+    @StateObject private var viewModel = DriveViewModel()
+    @EnvironmentObject private var router: NavigationRouter
 
-    enum DriveFilter: String, CaseIterable, Identifiable {
-        case all = "All Files"
-        case folders = "Folders"
-        case documents = "Documents"
-        case media = "Media"
-        case starred = "Starred"
+    @State private var currentTab: Int = 0 // 0: Map, 1: Stats
+    @State private var showDrawer: Bool = false
+    @State private var showVehicleSheet: Bool = false
+    @State private var showDocUploadSheet: Bool = false
+    @State private var pinInput: String = ""
+    @State private var activeSubScreen: DriverSubScreen? = nil
 
+    enum DriverSubScreen: String, Identifiable {
+        case history, earnings, payout, documents, vehicle, safety, support, settings
         var id: String { rawValue }
     }
 
-    @State private var files: [DriveFileItem] = [
-        DriveFileItem(id: "f1", name: "Project Specifications", sizeFormatted: "--", updatedDate: "Today, 10:15 AM", isFolder: true, isStarred: true),
-        DriveFileItem(id: "f2", name: "TJ App Designs 2026", sizeFormatted: "--", updatedDate: "Yesterday", isFolder: true),
-        DriveFileItem(id: "f3", name: "Architecture_Overview.pdf", sizeFormatted: "4.2 MB", updatedDate: "Sep 28, 2026", isFolder: false, fileExtension: "pdf", isStarred: true),
-        DriveFileItem(id: "f4", name: "Demo_Presentation.mp4", sizeFormatted: "128.5 MB", updatedDate: "Sep 25, 2026", isFolder: false, fileExtension: "mp4"),
-        DriveFileItem(id: "f5", name: "ProfileBanner.png", sizeFormatted: "2.1 MB", updatedDate: "Sep 20, 2026", isFolder: false, fileExtension: "png"),
-        DriveFileItem(id: "f6", name: "VoiceNote_Record.mp3", sizeFormatted: "8.4 MB", updatedDate: "Sep 18, 2026", isFolder: false, fileExtension: "mp3"),
-        DriveFileItem(id: "f7", name: "Backup_Database.zip", sizeFormatted: "340.0 MB", updatedDate: "Sep 10, 2026", isFolder: false, fileExtension: "zip")
-    ]
-
     public init() {}
-
-    private var filteredFiles: [DriveFileItem] {
-        files.filter { file in
-            let matchesSearch = searchText.isEmpty || file.name.localizedCaseInsensitiveContains(searchText)
-            switch selectedFilter {
-            case .all: return matchesSearch
-            case .folders: return matchesSearch && file.isFolder
-            case .documents: return matchesSearch && (!file.isFolder && (file.fileExtension == "pdf" || file.fileExtension == "doc"))
-            case .media: return matchesSearch && (!file.isFolder && ["jpg", "png", "mp4", "mp3"].contains(file.fileExtension))
-            case .starred: return matchesSearch && file.isStarred
-            }
-        }
-    }
 
     public var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottomTrailing) {
+            ZStack {
                 VStack(spacing: 0) {
-                    // Search Bar
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
-                        TextField("Search cloud drive...", text: $searchText)
-                            .textFieldStyle(.plain)
-                        if !searchText.isEmpty {
-                            Button(action: { searchText = "" }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                    .padding(10)
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                    .padding(.top, 8)
+                    // Custom Driver Top Bar
+                    topBarHeader
 
-                    // Storage Summary Card
-                    storageUsageCard
-                        .padding(.horizontal)
-                        .padding(.top, 12)
-
-                    // Category Filter Pills & Layout Toggle
-                    HStack {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(DriveFilter.allCases) { filter in
-                                    Button(action: { selectedFilter = filter }) {
-                                        Text(filter.rawValue)
-                                            .font(.footnote)
-                                            .fontWeight(selectedFilter == filter ? .bold : .medium)
-                                            .padding(.horizontal, 14)
-                                            .padding(.vertical, 6)
-                                            .background(selectedFilter == filter ? Color.blue : Color(.tertiarySystemBackground))
-                                            .foregroundColor(selectedFilter == filter ? .white : .primary)
-                                            .cornerRadius(16)
-                                    }
-                                }
-                            }
-                        }
-
-                        Button(action: { isGridView.toggle() }) {
-                            Image(systemName: isGridView ? "list.bullet" : "squareshape.split.2x2")
-                                .font(.system(size: 18))
-                                .padding(8)
-                                .background(Color(.secondarySystemBackground))
-                                .cornerRadius(8)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
-
-                    // File List or Grid
-                    if filteredFiles.isEmpty {
-                        Spacer()
-                        VStack(spacing: 12) {
-                            Image(systemName: "folder.badge.questionmark")
-                                .font(.system(size: 48))
-                                .foregroundColor(.secondary)
-                            Text("No files found")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                    } else if isGridView {
-                        ScrollView {
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                                ForEach(filteredFiles) { file in
-                                    fileGridCard(file)
-                                }
-                            }
-                            .padding(.horizontal)
-                            .padding(.bottom, 80)
-                        }
+                    if !viewModel.isDriverApproved {
+                        unapprovedReviewView
+                    } else if currentTab == 0 {
+                        mapDashboardView
                     } else {
-                        List {
-                            ForEach(filteredFiles) { file in
-                                fileListRow(file)
-                            }
-                        }
-                        .listStyle(.plain)
+                        statsDashboardView
                     }
                 }
 
-                // Floating Add Button
-                Menu {
-                    Button(action: { showUploadSheet = true }) {
-                        Label("Upload File", systemImage: "doc.badge.plus")
-                    }
-                    Button(action: { showNewFolderAlert = true }) {
-                        Label("New Folder", systemImage: "folder.badge.plus")
-                    }
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.title2.bold())
-                        .foregroundColor(.white)
-                        .frame(width: 56, height: 56)
-                        .background(Color.blue)
-                        .clipShape(Circle())
-                        .shadow(radius: 6)
-                }
-                .padding(.trailing, 20)
-                .padding(.bottom, 20)
-            }
-            .navigationTitle("Cloud Drive")
-            .sheet(isPresented: $showUploadSheet) {
-                VStack(spacing: 20) {
-                    Text("Upload File to Drive")
-                        .font(.title2.bold())
-                        .padding(.top)
-
-                    Image(systemName: "cloud.pttr.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(.blue)
-
-                    Text("Choose a file from device storage, photos, or documents to sync seamlessly.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-
-                    Button("Select File from Device") {
-                        showUploadSheet = false
-                    }
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-
-                    Spacer()
-                }
-                .presentationDetents([.height(300)])
-            }
-            .alert("Create New Folder", isPresented: $showNewFolderAlert) {
-                TextField("Folder Name", text: $newFolderName)
-                Button("Cancel", role: .cancel) { newFolderName = "" }
-                Button("Create") {
-                    if !newFolderName.isEmpty {
-                        files.insert(DriveFileItem(id: UUID().uuidString, name: newFolderName, sizeFormatted: "--", updatedDate: "Just now", isFolder: true), at: 0)
-                        newFolderName = ""
-                    }
+                // Global Incoming Ride Request Overlay
+                if viewModel.isDriverOnline && viewModel.incomingRideRequest != nil {
+                    incomingRequestOverlay
                 }
             }
-            .alert("Rename", isPresented: Binding(get: { renameTarget != nil }, set: { if !$0 { renameTarget = nil } })) {
-                TextField("Name", text: $renameText)
-                Button("Save") {
-                    if let target = renameTarget, let index = files.firstIndex(where: { $0.id == target.id }) {
-                        let old = files[index]
-                        files[index] = DriveFileItem(id: old.id, name: renameText, sizeFormatted: old.sizeFormatted, updatedDate: old.updatedDate, isFolder: old.isFolder, fileExtension: old.fileExtension, isStarred: old.isStarred)
+            .navigationBarHidden(true)
+            .sheet(isPresented: $showDrawer) {
+                DriverDrawerSheet(
+                    isDriverApproved: viewModel.isDriverApproved,
+                    onSelectScreen: { sub in
+                        showDrawer = false
+                        activeSubScreen = sub
+                    },
+                    onSwitchToRide: {
+                        showDrawer = false
+                        viewModel.toggleDriverMode(false)
                     }
-                    renameTarget = nil
+                )
+            }
+            .sheet(item: $activeSubScreen) { sub in
+                switch sub {
+                case .history:
+                    RideHistorySheet(trips: viewModel.trips)
+                case .earnings, .payout:
+                    DriverEarningsSheet(earnings: viewModel.driverEarnings, balance: viewModel.walletBalance)
+                case .documents:
+                    DriverDocumentsSheet(documents: viewModel.driverDocuments)
+                case .vehicle:
+                    VehicleProfileSheet(info: viewModel.vehicleInfo) { updated in
+                        viewModel.updateVehicleInfo(updated)
+                    }
+                case .safety:
+                    SafetyCenterSheet()
+                case .support:
+                    SupportSheet()
+                case .settings:
+                    SettingsView(router: router)
                 }
-                Button("Cancel", role: .cancel) { renameTarget = nil }
+            }
+            .sheet(isPresented: $showVehicleSheet) {
+                VehicleProfileSheet(info: viewModel.vehicleInfo) { updated in
+                    viewModel.updateVehicleInfo(updated)
+                    showVehicleSheet = false
+                }
+            }
+            .sheet(isPresented: $showDocUploadSheet) {
+                DocumentUploadSheet {
+                    showDocUploadSheet = false
+                }
             }
         }
     }
 
-    // MARK: - Storage Usage Component
-
-    private var storageUsageCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Label("Cloud Storage", systemImage: "icloud.fill")
-                    .font(.subheadline.bold())
-                    .foregroundColor(.blue)
-                Spacer()
-                Text("48.5 GB / 100 GB Used")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+    // MARK: - Driver Top Bar Header
+    private var topBarHeader: some View {
+        HStack {
+            Button(action: { showDrawer = true }) {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.primary)
             }
-
-            GeometryReader { geo in
-                HStack(spacing: 2) {
-                    Rectangle().fill(Color.blue).frame(width: geo.size.width * 0.28)
-                    Rectangle().fill(Color.purple).frame(width: geo.size.width * 0.12)
-                    Rectangle().fill(Color.orange).frame(width: geo.size.width * 0.08)
-                    Rectangle().fill(Color(.tertiarySystemFill))
-                }
-                .cornerRadius(4)
-            }
-            .frame(height: 8)
-
-            HStack(spacing: 12) {
-                storageLegend(color: .blue, text: "Docs")
-                storageLegend(color: .purple, text: "Media")
-                storageLegend(color: .orange, text: "Others")
-                Spacer()
-                Text("Upgrade")
-                    .font(.caption.bold())
-                    .foregroundColor(.blue)
-            }
-        }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(14)
-    }
-
-    private func storageLegend(color: Color, text: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(text).font(.caption2).foregroundColor(.secondary)
-        }
-    }
-
-    // MARK: - Row / Grid Cards
-
-    private func fileListRow(_ file: DriveFileItem) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: file.iconName)
-                .font(.title2)
-                .foregroundColor(file.isFolder ? .orange : .blue)
-                .frame(width: 40, height: 40)
-                .background(file.isFolder ? Color.orange.opacity(0.12) : Color.blue.opacity(0.12))
-                .cornerRadius(10)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(file.name)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-
-                Text("\(file.updatedDate) \(file.isFolder ? "" : "• " + file.sizeFormatted)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Text("TJ Drive")
+                    .font(.system(size: 18, weight: .bold))
+                Text(viewModel.isDriverOnline ? "Receiving requests" : "Currently offline")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(viewModel.isDriverOnline ? .green : .secondary)
             }
 
             Spacer()
 
-            Button(action: {
-                if let index = files.firstIndex(where: { $0.id == file.id }) {
-                    files[index].isStarred.toggle()
-                }
-            }) {
-                Image(systemName: file.isStarred ? "star.fill" : "star")
-                    .foregroundColor(file.isStarred ? .yellow : .gray.opacity(0.5))
-            }
-
-            Menu {
-                Button(action: { shareFile(file) }) { Label("Download", systemImage: "square.and.arrow.down") }
-                Button(action: { shareFile(file) }) { Label("Share Link", systemImage: "square.and.arrow.up") }
-                Button(action: { renameFile(file) }) { Label("Rename", systemImage: "pencil") }
-                Button(role: .destructive, action: {
-                    files.removeAll { $0.id == file.id }
-                }) { Label("Delete", systemImage: "trash") }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .foregroundColor(.gray)
-                    .padding(.leading, 8)
+            if viewModel.isDriverApproved {
+                Toggle("", isOn: Binding(
+                    get: { viewModel.isDriverOnline },
+                    set: { viewModel.setDriverOnlineStatus($0) }
+                ))
+                .labelsHidden()
+                .tint(.green)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(Color(UIColor.systemBackground))
+        .overlay(
+            Rectangle()
+                .frame(height: 0.5)
+                .foregroundColor(Color.gray.opacity(0.2)),
+            alignment: .bottom
+        )
     }
 
-    private func shareFile(_ file: DriveFileItem) {
-        let av = UIActivityViewController(activityItems: [file.name], applicationActivities: nil)
-        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let root = scene.windows.first?.rootViewController {
-            root.present(av, animated: true)
-        }
-    }
+    // MARK: - Unapproved Account Review View
+    private var unapprovedReviewView: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                Image(systemName: "clock.badge.checkmark.fill")
+                    .font(.system(size: 64))
+                    .foregroundColor(.orange)
+                    .padding(.top, 30)
 
-    private func renameFile(_ file: DriveFileItem) {
-        renameText = file.name
-        renameTarget = file
-    }
+                Text("Account Under Review")
+                    .font(.title2.bold())
 
-    private func fileGridCard(_ file: DriveFileItem) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: file.iconName)
-                    .font(.title2)
-                    .foregroundColor(file.isFolder ? .orange : .blue)
-                Spacer()
-                Button(action: {
-                    if let index = files.firstIndex(where: { $0.id == file.id }) {
-                        files[index].isStarred.toggle()
+                Text("Tap a document to upload a clear photo. TJ reviews it before you can go online.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                VStack(spacing: 10) {
+                    ForEach(viewModel.driverDocuments) { doc in
+                        DriverDocRowItem(doc: doc) {
+                            showDocUploadSheet = true
+                        }
                     }
-                }) {
-                    Image(systemName: file.isStarred ? "star.fill" : "star")
-                        .foregroundColor(file.isStarred ? .yellow : .gray.opacity(0.4))
                 }
+                .padding(.horizontal)
+
+                Button(action: { showVehicleSheet = true }) {
+                    HStack {
+                        Image(systemName: "car.fill")
+                        Text("Add Vehicle Details")
+                            .fontWeight(.bold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .cornerRadius(14)
+                    .padding(.horizontal)
+                }
+
+                Spacer(minLength: 40)
+            }
+        }
+    }
+
+    // MARK: - Map Dashboard View (currentTab == 0)
+    private var mapDashboardView: some View {
+        ZStack(alignment: .bottom) {
+            MapViewContainer(
+                coordinate: viewModel.pickupCoordinate,
+                destination: viewModel.selectedDestination,
+                driver: viewModel.assignedDriver,
+                nearbyDrivers: viewModel.nearbyDrivers
+            )
+            .ignoresSafeArea(edges: .all)
+
+            // Top Floating Demand Banner
+            VStack {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(viewModel.areaPresence.clients) potential clients within 5 km")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.primary)
+                        Text("People with the app open nearby")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(14)
+                .background(Color(UIColor.systemBackground))
+                .cornerRadius(16)
+                .shadow(radius: 4)
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+
+                Spacer()
             }
 
-            Text(file.name)
-                .font(.subheadline.bold())
-                .lineLimit(2)
+            // Offline Overlay / Bottom Trip Control Bar
+            if !viewModel.isDriverOnline {
+                VStack(spacing: 16) {
+                    Image(systemName: "antenna.radiowaves.left.and.right.slash")
+                        .font(.system(size: 40))
+                        .foregroundColor(.blue)
 
-            Text(file.isFolder ? file.updatedDate : file.sizeFormatted)
-                .font(.caption)
-                .foregroundColor(.secondary)
+                    Text("You are offline")
+                        .font(.title2.bold())
+
+                    Text("Go online to receive rides. TJ keeps 20% of each fare.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+
+                    Button("GO ONLINE") {
+                        viewModel.setDriverOnlineStatus(true)
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .cornerRadius(16)
+                }
+                .padding(24)
+                .background(Color(UIColor.systemBackground))
+                .cornerRadius(24)
+                .shadow(radius: 12)
+                .padding(20)
+            } else if viewModel.bookingStatus == .enRoute || viewModel.bookingStatus == .arrived || viewModel.bookingStatus == .inProgress {
+                activeTripControlBar
+            }
+
+            // Bottom Navigation Bar
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: { currentTab = 0 }) {
+                        VStack(spacing: 4) {
+                            Image(systemName: "map.fill")
+                                .font(.system(size: 20))
+                            Text("Map").font(.caption.bold())
+                        }
+                        .foregroundColor(currentTab == 0 ? .blue : .secondary)
+                    }
+                    Spacer()
+                    Button(action: { currentTab = 1 }) {
+                        VStack(spacing: 4) {
+                            Image(systemName: "chart.bar.fill")
+                                .font(.system(size: 20))
+                            Text("Stats").font(.caption.bold())
+                        }
+                        .foregroundColor(currentTab == 1 ? .blue : .secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 10)
+                .background(Color(UIColor.systemBackground))
+                .shadow(radius: 4)
+            }
         }
-        .padding()
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(14)
+    }
+
+    // MARK: - Active Trip Driver Control Bar
+    private var activeTripControlBar: some View {
+        VStack(spacing: 14) {
+            Text(tripStatusText(viewModel.bookingStatus))
+                .font(.system(size: 16, weight: .bold))
+
+            if viewModel.bookingStatus == .enRoute {
+                Button("I HAVE ARRIVED") {
+                    viewModel.markArrived()
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.blue)
+                .cornerRadius(14)
+            } else if viewModel.bookingStatus == .arrived {
+                HStack {
+                    TextField("Enter 4-Digit Passenger PIN", text: $pinInput)
+                        .keyboardType(.numberPad)
+                        .textFieldStyle(.roundedBorder)
+                    Button("Verify") {
+                        if viewModel.verifySafetyPin(pinInput) {
+                            pinInput = ""
+                        }
+                    }
+                    .fontWeight(.bold)
+                }
+            } else if viewModel.bookingStatus == .inProgress {
+                Button("COMPLETE TRIP") {
+                    viewModel.completeTrip()
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.green)
+                .cornerRadius(14)
+            }
+        }
+        .padding(20)
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(24)
+        .shadow(radius: 8)
+        .padding(20)
+    }
+
+    private func tripStatusText(_ status: BookingStatus) -> String {
+        switch status {
+        case .enRoute: return "Head to pickup location"
+        case .arrived: return "Ask passenger for 4-digit PIN"
+        case .inProgress: return "Driving to destination..."
+        default: return ""
+        }
+    }
+
+    // MARK: - Stats Dashboard View (currentTab == 1)
+    private var statsDashboardView: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // Vehicle Card
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Vehicle Profile").font(.headline.bold())
+                        Spacer()
+                        Button("Edit") { showVehicleSheet = true }
+                            .font(.subheadline.bold())
+                            .foregroundColor(.blue)
+                    }
+                    Text("\(viewModel.vehicleInfo.make) \(viewModel.vehicleInfo.model) (\(viewModel.vehicleInfo.year))")
+                        .font(.subheadline)
+                    Text(viewModel.vehicleInfo.plateNumber)
+                        .font(.title3.bold())
+                        .foregroundColor(.blue)
+                }
+                .padding()
+                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .cornerRadius(16)
+
+                // Performance Grid
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
+                    StatTile(title: "Total Trips", value: "\(viewModel.driverStats.totalTrips)", icon: "car.fill")
+                    StatTile(title: "Rating", value: "4.9 ★", icon: "star.fill")
+                    StatTile(title: "Acceptance", value: "\(Int(viewModel.driverStats.acceptanceRate))%", icon: "checkmark.circle.fill")
+                    StatTile(title: "Online Hours", value: "\(String(format: "%.1f", viewModel.driverStats.onlineHours))h", icon: "clock.fill")
+                }
+
+                // Earnings Card
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Weekly Earnings")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    HStack {
+                        Text("R\(String(format: "%.2f", viewModel.driverEarnings))")
+                            .font(.title.bold())
+                            .foregroundColor(.blue)
+                        Spacer()
+                        Text("Pays Mondays 06:00")
+                            .font(.caption.bold())
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding()
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(16)
+
+                // Documents List
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("My Documents").font(.headline.bold())
+                    ForEach(viewModel.driverDocuments) { doc in
+                        DriverDocRowItem(doc: doc) { showDocUploadSheet = true }
+                    }
+                }
+
+                Spacer(minLength: 80)
+            }
+            .padding()
+        }
+    }
+
+    // MARK: - Incoming Ride Request Card Overlay
+    private var incomingRequestOverlay: some View {
+        VStack {
+            Spacer()
+            if let req = viewModel.incomingRideRequest {
+                VStack(spacing: 16) {
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("New Ride Request").font(.caption.bold()).foregroundColor(.blue)
+                            Text(req.passengerName).font(.title2.bold())
+                        }
+                        Spacer()
+                        Text("★ 4.9").font(.headline.bold()).foregroundColor(.orange)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(req.pickupAddress, systemImage: "circle.fill")
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                        Label(req.destinationAddress, systemImage: "square.fill")
+                            .font(.subheadline)
+                            .foregroundColor(.red)
+                    }
+
+                    HStack {
+                        Text(req.distance).foregroundColor(.secondary)
+                        Spacer()
+                        Text("R\(String(format: "%.2f", req.fare))").font(.title.bold())
+                    }
+
+                    HStack(spacing: 14) {
+                        Button("Decline") {
+                            viewModel.declineRideRequest()
+                        }
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(14)
+
+                        Button("Accept") {
+                            viewModel.acceptRideRequest()
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.green)
+                        .cornerRadius(14)
+                    }
+                }
+                .padding(24)
+                .background(Color(UIColor.systemBackground))
+                .cornerRadius(24)
+                .shadow(radius: 16)
+                .padding(20)
+            }
+        }
     }
 }
 
-#Preview {
-    DriveView()
+// MARK: - Driver Dashboard Subviews
+
+struct StatTile: View {
+    let title: String
+    let value: String
+    let icon: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: icon)
+                .foregroundColor(.blue)
+            Text(value).font(.title3.bold())
+            Text(title).font(.caption).foregroundColor(.secondary)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .cornerRadius(16)
+    }
+}
+
+struct DriverDocRowItem: View {
+    let doc: DriverDocument
+    let onClick: () -> Void
+
+    var body: some View {
+        Button(action: onClick) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(doc.type).font(.subheadline.bold()).foregroundColor(.primary)
+                    Text("Tap to upload clear photo").font(.caption).foregroundColor(.secondary)
+                }
+                Spacer()
+                Text(doc.status)
+                    .font(.caption2.bold())
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(doc.status == "APPROVED" ? Color.green.opacity(0.2) : Color.orange.opacity(0.2))
+                    .foregroundColor(doc.status == "APPROVED" ? .green : .orange)
+                    .cornerRadius(6)
+            }
+            .padding()
+            .background(Color(UIColor.secondarySystemGroupedBackground))
+            .cornerRadius(12)
+        }
+    }
+}
+
+struct DriverDrawerSheet: View {
+    let isDriverApproved: Bool
+    let onSelectScreen: (DriveView.DriverSubScreen) -> Void
+    let onSwitchToRide: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button(action: onSwitchToRide) {
+                        HStack {
+                            Image(systemName: "person.fill")
+                                .foregroundColor(.white)
+                            Text("SWITCH TO RIDE")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.blue)
+                        .cornerRadius(12)
+                    }
+                }
+
+                Section("Driver Menu") {
+                    DrawerRow(icon: "clock.arrow.circlepath", title: "Trip history") { onSelectScreen(.history) }
+                    DrawerRow(icon: "dollarsign.circle.fill", title: "Earnings") { onSelectScreen(.earnings) }
+                    DrawerRow(icon: "building.columns.fill", title: "Payout methods") { onSelectScreen(.payout) }
+                    DrawerRow(icon: "doc.text.fill", title: "Documents") { onSelectScreen(.documents) }
+                    DrawerRow(icon: "car.fill", title: "Vehicle profile") { onSelectScreen(.vehicle) }
+                    DrawerRow(icon: "shield.fill", title: "Safety") { onSelectScreen(.safety) }
+                    DrawerRow(icon: "questionmark.circle.fill", title: "Support") { onSelectScreen(.support) }
+                    DrawerRow(icon: "gearshape.fill", title: "Settings") { onSelectScreen(.settings) }
+                }
+            }
+            .navigationTitle("Driver Menu")
+        }
+    }
+}
+
+struct VehicleProfileSheet: View {
+    let info: VehicleInfo
+    let onSave: (VehicleInfo) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var make: String
+    @State private var model: String
+    @State private var year: String
+    @State private var plate: String
+    @State private var color: String
+
+    init(info: VehicleInfo, onSave: @escaping (VehicleInfo) -> Void) {
+        self.info = info
+        self.onSave = onSave
+        _make = State(initialValue: info.make)
+        _model = State(initialValue: info.model)
+        _year = State(initialValue: info.year)
+        _plate = State(initialValue: info.plateNumber)
+        _color = State(initialValue: info.color)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Vehicle Details") {
+                    TextField("Make", text: $make)
+                    TextField("Model", text: $model)
+                    TextField("Year", text: $year)
+                    TextField("Color", text: $color)
+                    TextField("License Plate", text: $plate)
+                }
+            }
+            .navigationTitle("Vehicle Profile")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(VehicleInfo(make: make, model: model, year: year, plateNumber: plate, color: color))
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct DocumentUploadSheet: View {
+    let onUpload: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Upload Document").font(.title2.bold()).padding(.top)
+            Text("Select photo from device storage").font(.subheadline).foregroundColor(.secondary)
+            Button("Choose Photo") {
+                onUpload()
+                dismiss()
+            }
+            .font(.headline)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.blue)
+            .cornerRadius(12)
+            .padding(.horizontal)
+
+            Spacer()
+        }
+    }
+}
+
+struct DriverEarningsSheet: View {
+    let earnings: Double
+    let balance: Double
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Weekly Total") {
+                    HStack {
+                        Text("Earnings")
+                        Spacer()
+                        Text("R\(String(format: "%.2f", earnings))").font(.title2.bold()).foregroundColor(.blue)
+                    }
+                }
+                Section("Wallet Balance") {
+                    HStack {
+                        Text("Available")
+                        Spacer()
+                        Text("R\(String(format: "%.2f", balance))").bold()
+                    }
+                }
+            }
+            .navigationTitle("Earnings & Wallet")
+        }
+    }
+}
+
+struct DriverDocumentsSheet: View {
+    let documents: [DriverDocument]
+    var body: some View {
+        NavigationStack {
+            List(documents) { doc in
+                HStack {
+                    Text(doc.type).font(.headline)
+                    Spacer()
+                    Text(doc.status).font(.caption.bold()).foregroundColor(.green)
+                }
+            }
+            .navigationTitle("Documents")
+        }
+    }
 }
