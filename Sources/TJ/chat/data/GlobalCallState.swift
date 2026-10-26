@@ -2,103 +2,103 @@ import Foundation
 import Combine
 import SwiftUI
 
+public enum CallType: String, Codable, Sendable {
+    case voice = "voice"
+    case video = "video"
+}
+
 @MainActor
-public class GlobalCallState: ObservableObject {
+public final class GlobalCallState: ObservableObject {
     public static let shared = GlobalCallState()
 
     @Published public var isCallActive: Bool = false
     @Published public var activeSessionId: String? = nil
     @Published public var activeParticipantId: String? = nil
-    @Published public var activeCallType: CallType? = .voice
+    @Published public var activeCallType: CallType = .voice
     @Published public var isConnectionEstablished: Bool = false
     @Published public var isRinging: Bool = false
     @Published public var isAnswered: Bool = false
     @Published public var callDurationSeconds: Int = 0
+    @Published public var activeParticipantName: String = "In Call"
+
     @Published public var contactNames: [String: String] = [:]
     @Published public var contactPhones: [String: String] = [:]
-    @Published public var incomingCall: IncomingCallInfo?
 
-    private var timer: Timer?
+    private var durationTimer: Timer? = nil
 
-    public init() {}
+    private init() {}
 
-    public func setCallActive(_ active: Bool, sessionId: String?, participantId: String?, callType: CallType?) {
-        self.isCallActive = active
+    public func updateContactInfo(userId: String, name: String, phone: String?) {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cleanName.isEmpty && cleanName != userId {
+            contactNames[userId] = cleanName
+        }
+        if let phone, !phone.isEmpty {
+            contactPhones[userId] = phone
+        }
+    }
+
+    public func getContactName(_ userId: String) -> String? {
+        return contactNames[userId]
+    }
+
+    public func getContactPhone(_ userId: String) -> String? {
+        return contactPhones[userId]
+    }
+
+    public func startCall(sessionId: String = UUID().uuidString, participantId: String, name: String?, type: CallType) {
+        self.isCallActive = true
         self.activeSessionId = sessionId
         self.activeParticipantId = participantId
-        self.activeCallType = callType
-        if active {
-            startTimer()
-        } else {
-            stopTimer()
+        self.activeCallType = type
+        self.activeParticipantName = name?.isEmpty == false ? name! : (contactNames[participantId] ?? "In Call")
+        self.isRinging = true
+        self.isAnswered = false
+        self.isConnectionEstablished = false
+        self.callDurationSeconds = 0
+
+        startTimer()
+    }
+
+    public func setConnectionEstablished(_ established: Bool) {
+        self.isConnectionEstablished = established
+        if established {
+            self.isRinging = false
+            self.isAnswered = true
         }
     }
 
-    public func startCall(receiverId: String, isVideo: Bool) {
-        let sid = UUID().uuidString
-        let type: CallType = isVideo ? .video : .voice
-        setCallActive(true, sessionId: sid, participantId: receiverId, callType: type)
-    }
-
-    public func updateContactInfo(id: String, name: String, phone: String?) {
-        contactNames[id] = name
-        if let phone = phone {
-            contactPhones[id] = phone
+    public func setAnswered(_ answered: Bool) {
+        self.isAnswered = answered
+        if answered {
+            self.isRinging = false
         }
     }
 
-    public func onCallEnded(sessionId: String) {
-        if incomingCall?.id == sessionId || sessionId == "force_all" {
-            incomingCall = nil
-        }
-        if activeSessionId == sessionId || sessionId == "force_all" {
-            setCallActive(false, sessionId: nil, participantId: nil, callType: nil)
-            isConnectionEstablished = false
-            isAnswered = false
-            isRinging = false
-            callDurationSeconds = 0
-        }
+    public func endCall() {
+        self.isCallActive = false
+        self.activeSessionId = nil
+        self.activeParticipantId = nil
+        self.isConnectionEstablished = false
+        self.isRinging = false
+        self.isAnswered = false
+        self.callDurationSeconds = 0
+
+        stopTimer()
     }
 
     private func startTimer() {
         stopTimer()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.callDurationSeconds += 1
+        durationTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self, self.isCallActive else { return }
+                self.callDurationSeconds += 1
+            }
         }
     }
 
     private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-    }
-}
-
-@MainActor
-public class CallViewModel: ObservableObject {
-    @Published public var isMicMuted: Bool = false
-    @Published public var isSpeakerOn: Bool = false
-
-    public init() {}
-
-    public func toggleMic() {
-        isMicMuted.toggle()
-        WebRtcCallManager.shared.setMicEnabled(!isMicMuted)
-    }
-
-    public func toggleSpeaker() {
-        isSpeakerOn.toggle()
-        WebRtcCallManager.shared.setSpeakerEnabled(isSpeakerOn)
-    }
-
-    public func switchCamera() {
-        WebRtcCallManager.shared.switchCamera()
-    }
-
-    public func syncSpeaker(_ on: Bool) {
-        isSpeakerOn = on
-    }
-
-    public func endCall() {
-        CallSocketBridge.shared.endActive(reason: "ended")
+        durationTimer?.invalidate()
+        durationTimer = nil
     }
 }

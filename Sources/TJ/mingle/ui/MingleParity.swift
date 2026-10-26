@@ -26,11 +26,11 @@ enum MingleCopy {
     static func activityText(_ type: String) -> String {
         switch type {
         case "match": return "matched with you! Say hi"
-        case "view": return "viewed your Mingle profile"
+        case "view": return "viewed your Friends profile"
         case "photo_like": return "liked a photo on your profile"
         case "super_like": return "sent you a Super Like"
-        case "message_request": return "You received a new message request on Mingle"
-        default: return "liked your Mingle profile"
+        case "message_request": return "You received a new message request on Friends"
+        default: return "liked your Friends profile"
         }
     }
 
@@ -48,19 +48,19 @@ enum MingleCopy {
         let resolved = reason == "NO_LOCATION" && !denied ? "RETRY_LOCATION" : reason
         switch resolved {
         case "NO_LOCATION":
-            return ("Location is required", "Mingle can only show people near you after location is on.", "Enable Location")
+            return ("Location is required", "Friends can only show people near you after location is on.", "Enable Location")
         case "RETRY_LOCATION":
             return ("Location is not available", "Your location could not be read. Try again outside, or check that location is on.", "Try again")
         case "NO_CANDIDATE_LOCATION":
-            return ("No shared locations yet", "Other people are on Mingle, but none of them have shared a location.", "Check again")
+            return ("No shared locations yet", "Other people are on Friends, but none of them have shared a location.", "Check again")
         case "OUT_OF_RADIUS":
             return ("No one within \(radiusKm) km", "People with photos are farther away. Increasing your radius will look farther.", "Increase Radius")
         case "NO_PHOTO":
-            return ("No photos nearby", "People in range have not added a Mingle photo yet, so their cards stay hidden.", "Check again")
+            return ("No photos nearby", "People in range have not added a Friends photo yet, so their cards stay hidden.", "Check again")
         case "DIFFERENT_COUNTRY":
-            return ("No one from your country", "People in range are in a different country. Mingle only shows the same country.", "Look farther")
+            return ("No one from your country", "People in range are in a different country. Friends only shows the same country.", "Look farther")
         case "CONTACTS_HIDDEN":
-            return ("Nearby people are in your contacts", "Mingle hides people saved in your contacts, including matching phone numbers.", "")
+            return ("Nearby people are in your contacts", "Friends hides people saved in your contacts, including matching phone numbers.", "")
         case "ALREADY_SWIPED":
             return ("You've already seen everyone nearby", "Passed and liked profiles stay hidden. Increase your radius to look farther.", "Increase Radius")
         case "PREFERENCES":
@@ -68,7 +68,7 @@ enum MingleCopy {
         case "DAILY_LIMIT":
             return ("Daily profile limit reached", "The free daily browse is used. Spend coins or watch a completed rewarded ad for more profiles.", "")
         default:
-            return ("No one else is on Mingle nearby", "When someone nearby opens Mingle and adds a photo, they will show up here.", "Check again")
+            return ("No one else is on Friends nearby", "When someone nearby opens Friends and adds a photo, they will show up here.", "Check again")
         }
     }
 
@@ -103,8 +103,8 @@ struct MingleActivitySheet: View {
                         Image(systemName: "heart")
                             .font(.system(size: 48))
                             .foregroundColor(.appPrimary.opacity(0.6))
-                        Text("No Mingle Activity Yet").font(.headline)
-                        Text("When people like or match with your Mingle profile, they will appear right here.")
+                        Text("No Friends Activity Yet").font(.headline)
+                        Text("When people like or match with your Friends profile, they will appear right here.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)

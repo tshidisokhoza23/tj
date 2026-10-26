@@ -20,7 +20,7 @@ public enum BottomNavItem: Int, CaseIterable, Identifiable {
         case .social: return "Social"
         case .scroll: return "Scroll"
         case .jobs: return "Job"
-        case .mingle: return "Court"
+        case .mingle: return "Friends"
         case .stream: return "Stream"
         case .ride: return "Ride"
         case .more: return "More"
@@ -273,6 +273,14 @@ public struct MainTabView: View {
                         router.navigate(to: .chatDetail(conversationId: id, participantName: nil))
                     }
                 )
+            case .nearby:
+                NearbyView()
+            case .news:
+                NewsView()
+            case .rewards:
+                RewardsView()
+            case .contests:
+                ContestDiscoveryView()
             case .stream:
                 MusicPlayerView()
             case .ride:
@@ -364,7 +372,7 @@ public struct CustomMainBottomBar: View {
 // MARK: - More Shortcuts Sheet View with Court / Mingle shortcut
 
 public enum MoreShortcutRoute: String, Identifiable {
-    case mingle, stream, ride, jobs, vocab, wallet, profile, settings, files, calendar
+    case mingle, nearby, news, rewards, contests, stream, ride, jobs, vocab, wallet, profile, settings, files, calendar
     public var id: String { rawValue }
 }
 
@@ -378,13 +386,15 @@ public struct MoreShortcutsSheetView: View {
     }
 
     private let shortcuts: [(route: MoreShortcutRoute, title: String, icon: String, color: Color, isEnabled: Bool)] = [
-        (.mingle, "Court", "sparkles", Color.purple, true),
+        (.contests, "Contests", "trophy.fill", Color.yellow, true),
+        (.rewards, "Rewards", "star.fill", Color.orange, true),
+        (.news, "News", "newspaper.fill", Color.red, true),
+        (.nearby, "Nearby", "mappin.and.ellipse", Color.teal, true),
+        (.mingle, "Friends", "sparkles", Color.purple, true),
         (.wallet, "Wallet", "creditcard.fill", Color(red: 1.0, green: 0.8, blue: 0.4), true),
         (.files, "Files", "folder.fill", Color.yellow, true),
         (.calendar, "Calendar", "calendar", Color.pink, true),
-        (.vocab, "Vocab", "book.fill", Color.blue, true),
-        (.stream, "Stream", "music.note", Color.purple, true),
-        (.ride, "Ride", "car.fill", Color.green, true)
+        (.vocab, "Vocab", "book.fill", Color.blue, true)
     ]
 
     public var body: some View {

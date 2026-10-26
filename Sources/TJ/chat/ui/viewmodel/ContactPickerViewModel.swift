@@ -10,12 +10,22 @@ public class ContactPickerViewModel: ObservableObject {
 
     private var allContacts: [Contact] = []
 
+    public var currentUserId: String? {
+        UserDefaults.standard.string(forKey: "user_id")
+    }
+
     public init() {
         fetchContacts()
     }
 
     private func sortContacts(_ list: [Contact]) -> [Contact] {
-        list.sorted { a, b in
+        let myId = currentUserId
+        return list.filter { contact in
+            if let myId = myId, !myId.isEmpty, (contact.id == myId || contact.id == "user_\(myId)" || contact.id.replacingOccurrences(of: "user_", with: "") == myId.replacingOccurrences(of: "user_", with: "")) {
+                return false
+            }
+            return true
+        }.sorted { a, b in
             if a.isRegistered != b.isRegistered {
                 return a.isRegistered && !b.isRegistered
             }

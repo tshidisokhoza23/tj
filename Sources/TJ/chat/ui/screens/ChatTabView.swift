@@ -81,6 +81,19 @@ public struct ChatTabView: View {
         }
     }
 
+    private var registeredContactsNotInChats: [Contact] {
+        let activeUserIds = Set(chatsList.compactMap { $0.otherUserId ?? $0.id })
+        let allContacts = viewModel.contacts.data ?? []
+        let currentUserId = UserDefaults.standard.string(forKey: "user_id") ?? ""
+        return allContacts.filter { contact in
+            contact.isRegistered &&
+            contact.id != currentUserId &&
+            !activeUserIds.contains(contact.id) &&
+            !activeUserIds.contains("user_\(contact.id)") &&
+            !activeUserIds.contains(contact.id.replacingOccurrences(of: "user_", with: ""))
+        }
+    }
+
     private var archivedCount: Int {
         regularChats.filter(\.isArchived).count
     }
@@ -91,7 +104,7 @@ public struct ChatTabView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // Top App Bar matching Android Screenshot 1
+            // Top App Bar
             HStack {
                 if isSearchActive {
                     HStack(spacing: 12) {
@@ -152,7 +165,7 @@ public struct ChatTabView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
 
-            // Horizontal Scrollable Sub-Tab Pills matching Android Screenshot 1
+            // Horizontal Scrollable Sub-Tab Pills
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(0..<subTabs.count, id: \.self) { index in
@@ -303,13 +316,13 @@ public struct ChatTabView: View {
         .task { await storyRepository.syncStories() }
     }
 
-    // MARK: - Chats Tab Content matching Screenshot 1
+    // MARK: - Chats Tab Content
 
     private var chatsTabContent: some View {
         ZStack(alignment: .bottomTrailing) {
             ScrollView {
                 VStack(spacing: 0) {
-                    // Horizontal Stories Header Row matching Android Screenshot 1
+                    // Horizontal Stories Header Row
                     StoriesHeaderRow(
                         stories: storyRepository.userStories,
                         currentUserId: SessionStore.shared.userId,
@@ -345,10 +358,10 @@ public struct ChatTabView: View {
                         Divider()
                     }
 
-                    if viewModel.uiState.isChatsFetching && chatsList.isEmpty {
+                    if viewModel.uiState.isChatsFetching && chatsList.isEmpty && registeredContactsNotInChats.isEmpty {
                         ProgressView("Loading chats...")
                             .padding(.top, 40)
-                    } else if chatsList.isEmpty {
+                    } else if chatsList.isEmpty && registeredContactsNotInChats.isEmpty {
                         VStack(spacing: 12) {
                             Image(systemName: "bubble.left.and.bubble.right")
                                 .font(.system(size: 48))
@@ -377,18 +390,29 @@ public struct ChatTabView: View {
                                 Divider()
                                     .padding(.leading, 72)
                             }
+
+                            ForEach(registeredContactsNotInChats) { contact in
+                                RegisteredContactRowView(
+                                    contact: contact,
+                                    onClick: {
+                                        onChatSelected(ChatMessage(id: contact.id, type: .direct, senderName: contact.displayName, otherUserId: contact.id))
+                                    }
+                                )
+
+                                Divider()
+                                    .padding(.leading, 72)
+                            }
                         }
                     }
                 }
             }
 
-            // Double Floating Action Buttons matching Android Screenshot 1
+            // Double Floating Action Buttons
             VStack(alignment: .trailing, spacing: 12) {
-                // Upper Small Call FAB
                 Button(action: { showDirectMessages = true }) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 14)
-                            .fill(Color.appBottomNavPill) // #D0E1FB
+                            .fill(Color.appBottomNavPill)
                             .frame(width: 44, height: 44)
                             .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 2)
 
@@ -398,11 +422,10 @@ public struct ChatTabView: View {
                     }
                 }
 
-                // Lower Main Contacts FAB
                 Button(action: onNewChatClick) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 18)
-                            .fill(Color.appPrimary) // #0045BC
+                            .fill(Color.appPrimary)
                             .frame(width: 56, height: 56)
                             .shadow(color: Color.appPrimary.opacity(0.35), radius: 6, x: 0, y: 3)
 
@@ -452,33 +475,40 @@ public struct ChatTabView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    ChannelListView(
-                        channels: channelList,
-                        currentUserId: SessionStore.shared.userId,
-                        onChannelClick: { activeChannelDetail = $0 },
-                        onSubscribe: { channelsViewModel.subscribeToChannel(channelId: $0) }
-                    )
+                    List(channelList) { ch in
+                        ChannelItemView(
+                            channel: ch,
+                            currentUserId: SessionStore.shared.userId,
+                            onSelect: { activeChannelDetail = ch },
+                            onSubscribe: { id in
+                                channelsViewModel.subscribeToChannel(channelId: id)
+                            }
+                        )
+                    }
+                    .listStyle(.plain)
                 }
             }
 
-            // Floating Create Channel Action Button (FAB)
             Button(action: { showCreateChannel = true }) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(Color.appPrimary)
-                        .frame(width: 56, height: 56)
-                        .shadow(color: Color.appPrimary.opacity(0.35), radius: 6, x: 0, y: 3)
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                }
+                Image(systemName: "plus")
+                    .font(.title2.bold())
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(Color.blue)
+                    .clipShape(Circle())
+                    .shadow(radius: 6)
             }
-            .padding(24)
+            .padding(.trailing, 20)
+            .padding(.bottom, 20)
         }
         .sheet(isPresented: $showCreateChannel) {
             CreateChannelView(
-                viewModel: channelsViewModel,
-                onBack: { showCreateChannel = false }
+                onBack: { showCreateChannel = false },
+                onChannelCreated: { ch in
+                    showCreateChannel = false
+                    channelsViewModel.fetchChannels()
+                    activeChannelDetail = ch
+                }
             )
         }
     }
@@ -486,192 +516,45 @@ public struct ChatTabView: View {
     // MARK: - Jobs Tab Content
 
     private var jobsTabContent: some View {
-        Group {
-            if jobChats.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "briefcase")
-                        .font(.system(size: 40))
-                        .foregroundColor(.secondary)
-                    Text("No job chats yet")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(jobChats) { chat in
-                            ChatItemRow(chat: chat, onAvatarClick: { infoChat = chat })
-                                .onTapGesture { onChatSelected(chat) }
-                            Divider().padding(.leading, 72)
-                        }
-                    }
-                }
-            }
-        }
+        JobsHomeView()
     }
 
-    // MARK: - Rewards Tab Content matching Screenshot 3
+    // MARK: - Rewards Tab Content
 
     private var rewardsTabContent: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Total Points Header Card matching Screenshot 3
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        HStack(spacing: 4) {
-                            Text("Total Points")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.secondary)
-                            Image(systemName: "info.circle")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        }
-
-                        Spacer()
-
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("Today")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.secondary)
-                            Text("0")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.primary)
-                        }
-                    }
-
-                    HStack(spacing: 8) {
-                        Image(systemName: "star.circle.fill")
-                            .font(.system(size: 32))
-                            .foregroundColor(.orange)
-
-                        Text("\(Int(rewardViewModel.points))")
-                            .font(.system(size: 36, weight: .black))
-                            .foregroundColor(.primary)
-                    }
-                }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(UIColor.secondarySystemBackground))
-                .cornerRadius(20)
-
-                // Daily Tasks Title
-                Text("Daily Tasks")
-                    .font(.system(size: 18, weight: .bold))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                let dailyTasks: [RewardTask] = {
-                    if case .success(let dash) = rewardViewModel.uiState { return dash.tasks }
-                    return []
-                }()
-
-                if dailyTasks.isEmpty {
-                    Text("No tasks yet")
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                ForEach(dailyTasks) { task in
-                    HStack(spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.orange.opacity(0.12))
-                                .frame(width: 48, height: 48)
-
-                            Image(systemName: "play.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.orange)
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(task.title)
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundColor(.primary)
-
-                            Text("+\(Int(task.points)) points")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.orange)
-                        }
-
-                        Spacer()
-
-                        Button(action: {
-                            rewardViewModel.showRewardedAd(taskId: task.id, onReward: {})
-                        }) {
-                            Text("Watch")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(Color.appPrimary)
-                                .cornerRadius(12)
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-        }
+        RewardsView(viewModel: rewardViewModel)
     }
 }
 
-public struct TopMoreMenuSheetView: View {
-    public let selectedTab: Int
-    public var onContacts: () -> Void
-    public var onNewGroup: () -> Void
-    public var onStarred: () -> Void
-    public var onArchived: () -> Void
-    public var onMingle: () -> Void
-    public var onCreateChannel: () -> Void
-    public var onPostJob: () -> Void
-    public var onApplications: () -> Void
-    public var onJobProfile: () -> Void
-    public var onWallet: () -> Void
-    public var onSettings: () -> Void
-    public var onSignOut: () -> Void
+struct RegisteredContactRowView: View {
+    let contact: Contact
+    var onClick: () -> Void
 
-    public var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.headline)
-                .padding(.top, 16)
-                .padding(.bottom, 8)
-            ForEach(rows, id: \.0) { row in
-                Button(action: row.1) {
-                    HStack {
-                        Text(row.0).foregroundColor(.primary)
-                        Spacer()
-                    }
-                    .padding(.vertical, 12)
-                }
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 48, height: 48)
+                Text(String(contact.displayName.prefix(1)).uppercased())
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
             }
-            Divider()
-            Button(action: onSettings) {
-                Text("Settings").foregroundColor(.primary).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(contact.displayName)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                Text(contact.bio?.isEmpty == false ? contact.bio! : (contact.username.isEmpty ? "Tap to message" : "@\(contact.username)"))
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
             }
-            Button(action: onSignOut) {
-                Text("Sign Out").foregroundColor(.red).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12)
-            }
+
             Spacer()
         }
-        .padding(.horizontal, 24)
-    }
-
-    private var title: String {
-        switch selectedTab {
-        case 1: return "Channels"
-        case 2: return "Jobs"
-        case 3: return "Rewards"
-        default: return "Chats"
-        }
-    }
-
-    private var rows: [(String, () -> Void)] {
-        switch selectedTab {
-        case 1: return [("Create Channel", onCreateChannel)]
-        case 2: return [("Post Job", onPostJob), ("Applications", onApplications), ("Job Profile", onJobProfile)]
-        case 3: return [("Wallet", onWallet)]
-        default: return [("Contacts", onContacts), ("New Group", onNewGroup), ("Starred Messages", onStarred), ("Archived Chats", onArchived), ("Mingle Activity", onMingle)]
-        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onClick)
     }
 }

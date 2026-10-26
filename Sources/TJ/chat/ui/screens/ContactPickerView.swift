@@ -35,10 +35,13 @@ public struct ContactPickerView: View {
     }
 
     private var contactsList: [Contact] {
-        if isSearchActive && !searchQuery.isEmpty {
-            return viewModel.searchResults
+        let rawList = isSearchActive && !searchQuery.isEmpty ? viewModel.searchResults : (viewModel.contacts.data ?? [])
+        return rawList.filter { contact in
+            if let myId = viewModel.currentUserId, !myId.isEmpty, (contact.id == myId || contact.id == "user_\(myId)" || contact.id.replacingOccurrences(of: "user_", with: "") == myId.replacingOccurrences(of: "user_", with: "")) {
+                return false
+            }
+            return true
         }
-        return viewModel.contacts.data ?? []
     }
 
     public var body: some View {
@@ -88,14 +91,14 @@ public struct ContactPickerView: View {
             .padding(.vertical, 12)
 
             Divider()
-if isGroupMode {
+
+            if isGroupMode {
                 TextField("Group name", text: $groupName)
                     .textFieldStyle(.roundedBorder)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
             }
 
-            
             List {
                 if !isGroupMode {
                     Button(action: { isGroupMode = true }) {
@@ -130,20 +133,50 @@ if isGroupMode {
                 }
 
                 ForEach(contactsList) { contact in
+                    let titleText: String = {
+                        if contact.isRegistered {
+                            let name = contact.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let isPhone = name.hasPrefix("+") || name.allSatisfy { $0.isNumber || $0 == "+" || $0 == " " || $0 == "-" }
+                            if !name.isEmpty && !isPhone {
+                                return name
+                            } else if !contact.username.isEmpty {
+                                return "@\(contact.username)"
+                            } else {
+                                return "User"
+                            }
+                        } else {
+                            return contact.displayName.isEmpty ? contact.phoneNumber : contact.displayName
+                        }
+                    }()
+
+                    let subtitleText: String = {
+                        if contact.isRegistered {
+                            if let bio = contact.bio, !bio.isEmpty {
+                                return bio
+                            } else if !contact.username.isEmpty {
+                                return "@\(contact.username)"
+                            } else {
+                                return "Available"
+                            }
+                        } else {
+                            return contact.phoneNumber
+                        }
+                    }()
+
                     HStack(spacing: 12) {
                         ZStack {
                             Circle()
                                 .fill(contact.isRegistered ? Color.accentColor : Color.gray.opacity(0.3))
                                 .frame(width: 40, height: 40)
-                            Text(String((contact.displayName.isEmpty ? contact.phoneNumber : contact.displayName).prefix(1)).uppercased())
+                            Text(String(titleText.prefix(1)).uppercased())
                                 .font(.system(size: 16, weight: .bold))
                                 .foregroundColor(contact.isRegistered ? .white : .primary)
                         }
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(contact.displayName.isEmpty ? contact.phoneNumber : contact.displayName)
+                            Text(titleText)
                                 .font(.system(size: 15, weight: .bold))
-                            Text(contact.isRegistered ? (contact.bio ?? "Available") : contact.phoneNumber)
+                            Text(subtitleText)
                                 .font(.system(size: 13))
                                 .foregroundColor(.secondary)
                         }

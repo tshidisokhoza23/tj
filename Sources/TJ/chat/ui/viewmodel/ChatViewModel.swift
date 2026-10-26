@@ -205,6 +205,18 @@ public class ChatViewModel: ObservableObject {
         fetchChats()
     }
 
+    public func startVoiceOrVideoCall(receiverId: String, callType: CallType, name: String? = nil) {
+        let sessionId = UUID().uuidString
+        GlobalCallState.shared.startCall(sessionId: sessionId, participantId: receiverId, name: name, type: callType)
+        Task {
+            _ = try? await API.data("calls/initiate", method: "POST", json: [
+                "receiver_id": receiverId,
+                "session_id": sessionId,
+                "call_type": callType.rawValue
+            ])
+        }
+    }
+
     /// Keeps a chat Android would recreate from a live message, even when the
     /// server list still omits a conversation this user deleted.
     private static func mergedChats(server: [ChatMessage], local: [ChatMessage]) -> [ChatMessage] {

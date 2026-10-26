@@ -5,17 +5,6 @@ public struct LoginView: View {
     private var onLoginSuccess: (AuthResponse?) -> Void
     private var onNavigateToOtp: (String, String?, String?, String?, String?, String?) -> Void
 
-    @State private var username = ""
-    @State private var email = ""
-    @State private var password = ""
-    @State private var confirmPassword = ""
-    @State private var displayName = ""
-    @State private var phoneNumber = ""
-    @State private var isPasswordVisible = false
-    @State private var isConfirmPasswordVisible = false
-    @State private var isSignUp = false
-    @State private var showForgotPassword = false
-    @State private var forgotPasswordId = ""
     @State private var alertMessage: String? = nil
     @State private var showAlert = false
 
@@ -31,152 +20,114 @@ public struct LoginView: View {
 
     public var body: some View {
         ZStack {
-            // Background gradient
+            // Gradient background: deep blue top to cyan/bottom blue
             LinearGradient(
-                colors: [Color.appBackgroundDarkTop, Color.appBackgroundDarkBottom],
+                stops: [
+                    .init(color: Color(hex: "0A2A6B"), location: 0.0),
+                    .init(color: Color(hex: "0077E6"), location: 0.35),
+                    .init(color: Color(hex: "00C4E0"), location: 0.7),
+                    .init(color: Color(hex: "0099CC"), location: 1.0)
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 24) {
-                    Spacer().frame(height: 40)
+            // Subtle diagonal light shape
+            LinearGradient(
+                colors: [Color.clear, Color(hex: "00E5FF").opacity(0.13), Color.clear],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
-                    // App Logo Container
-                    AppLogo(size: 90)
-                        .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
+            VStack(spacing: 0) {
+                Spacer().frame(height: 72)
 
-                    VStack(spacing: 4) {
-                        Text(isSignUp ? "Create Account" : "Welcome Back")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.white)
+                // TJ Logo Container
+                ZStack {
+                    RoundedRectangle(cornerRadius: 22)
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 6)
+                        .frame(width: 88, height: 88)
 
-                        Text(isSignUp ? "Join TJ today" : "Login to continue")
-                            .font(.system(size: 15))
-                            .foregroundColor(.gray)
+                    Image("app_logo_main")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 88, height: 88)
+                        .clipShape(RoundedRectangle(cornerRadius: 22))
+                }
 
-                        Text("by TPSK")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.gray.opacity(0.6))
-                    }
+                Spacer().frame(height: 56)
 
-                    Button(action: {
-                        alertMessage = "Manual login & phone registration is temporarily disabled. Please tap 'Continue with Google'."
-                        showAlert = true
-                    }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "person.circle.fill")
-                                .foregroundColor(.appAccent)
-                                .font(.system(size: 20))
+                // Main title
+                Text("Welcome to TJ")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.white)
+                    .tracking(-0.5)
 
-                            Text("Sign in & sign up are currently supported via Google. Tap below to continue.")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.white)
-                                .multilineTextAlignment(.leading)
-                        }
-                        .padding(14)
-                        .frame(maxWidth: .infinity)
-                        .background(Color.appAccent.opacity(0.15))
-                        .cornerRadius(12)
-                    }
+                Spacer().frame(height: 16)
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Image(systemName: isSignUp ? "person" : "phone")
-                                .foregroundColor(.gray)
-                            TextField(isSignUp ? "Username" : "Phone Number", text: $username)
-                                .disabled(true)
-                                .foregroundColor(.gray)
-                        }
-                        .padding()
-                        .background(Color.white.opacity(0.08))
-                        .cornerRadius(16)
+                // Subtitle
+                Text("By continuing you accept the terms\nand conditions")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(.white.opacity(0.85))
+                    .lineSpacing(4)
+                    .multilineTextAlignment(.center)
 
-                        if let err = viewModel.fieldErrors["username"] {
-                            Text(err).font(.caption).foregroundColor(.red).padding(.leading, 12)
-                        }
-                    }
+                Spacer()
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Image(systemName: "lock")
-                                .foregroundColor(.gray)
-                            if isPasswordVisible {
-                                TextField("Password", text: $password)
-                                    .disabled(true)
-                                    .foregroundColor(.gray)
-                            } else {
-                                SecureField("Password", text: $password)
-                                    .disabled(true)
-                                    .foregroundColor(.gray)
-                            }
-                            Button(action: { isPasswordVisible.toggle() }) {
-                                Image(systemName: isPasswordVisible ? "eye" : "eye.slash")
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                        .padding()
-                        .background(Color.white.opacity(0.08))
-                        .cornerRadius(16)
-                    }
+                // Continue with Google Button
+                Button(action: {
+                    viewModel.signInWithGoogle()
+                }) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 28)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(hex: "4A90E2"), Color(hex: "5B9FEA"), Color(hex: "6BB0F0")],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
 
-                    if !isSignUp {
-                        HStack {
-                            Spacer()
-                            Button("Forgot Password?") {
-                                showForgotPassword = true
-                            }
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.appAccent)
-                        }
-                    }
-
-                    Spacer().frame(height: 12)
-
-                    Button(action: {
-                        viewModel.signInWithGoogle()
-                    }) {
-                        HStack(spacing: 12) {
-                            if viewModel.authState?.isLoading == true {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            } else {
+                        if viewModel.authState?.isLoading == true {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            HStack(spacing: 12) {
                                 Image(systemName: "g.circle.fill")
                                     .font(.system(size: 22))
                                     .foregroundColor(.white)
+
                                 Text("Continue with Google")
-                                    .font(.system(size: 18, weight: .bold))
+                                    .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(.white)
+                                    .tracking(0.2)
                             }
                         }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(
-                            LinearGradient(
-                                colors: [Color.logoBlueDark, Color.appAccent],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(16)
                     }
-
-                    HStack(spacing: 4) {
-                        Text("Registration & phone login disabled.")
-                            .font(.system(size: 13))
-                            .foregroundColor(.gray)
-                        Button("Use Google") {
-                            alertMessage = "Registration and login are managed automatically via Google. Please tap 'Continue with Google'."
-                            showAlert = true
-                        }
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.appAccent)
-                    }
-
-                    Spacer().frame(height: 32)
+                    .frame(height: 56)
                 }
+                .disabled(viewModel.authState?.isLoading == true)
                 .padding(.horizontal, 32)
+
+                Spacer().frame(height: 48)
+
+                // Terms and conditions link
+                Button(action: {
+                    if let url = URL(string: "https://firstappserver.fly.dev/privacy") {
+                        #if canImport(UIKit)
+                        UIApplication.shared.open(url)
+                        #endif
+                    }
+                }) {
+                    Text("Terms and conditions")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(.white.opacity(0.85))
+                }
+
+                Spacer().frame(height: 36)
             }
         }
         .onReceive(viewModel.$authState) { state in
@@ -191,38 +142,6 @@ public struct LoginView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(alertMessage ?? "")
-        }
-        .sheet(isPresented: $showForgotPassword) {
-            VStack(spacing: 20) {
-                Text("Reset Password")
-                    .font(.title2.bold())
-
-                Text("Enter your email or username and we'll send you instructions.")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-
-                TextField("Email or Username", text: $forgotPasswordId)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding()
-
-                HStack {
-                    Button("Cancel") {
-                        showForgotPassword = false
-                    }
-                    Spacer()
-                    Button("Send") {
-                        if !forgotPasswordId.isEmpty {
-                            viewModel.forgotPassword(emailOrUsername: forgotPasswordId)
-                            showForgotPassword = false
-                        }
-                    }
-                    .font(.headline)
-                }
-                .padding(.horizontal)
-            }
-            .padding()
-            .presentationDetents([.height(280)])
         }
     }
 }
