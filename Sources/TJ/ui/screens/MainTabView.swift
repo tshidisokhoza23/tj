@@ -418,22 +418,22 @@ public struct MoreShortcutsSheetView: View {
             .padding(.horizontal, 24)
             .padding(.top, 20)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                 ForEach(shortcuts, id: \.route) { item in
                     Button(action: {
                         if item.isEnabled {
                             onSelectRoute(item.route)
                         }
                     }) {
-                        VStack(spacing: 10) {
+                        VStack(spacing: 8) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 18)
-                                    .fill(item.isEnabled ? item.color.opacity(0.3) : Color(UIColor.secondarySystemBackground))
-                                    .frame(width: 68, height: 68)
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(item.isEnabled ? item.color.opacity(0.25) : Color(UIColor.secondarySystemBackground))
+                                    .frame(width: 56, height: 56)
 
                                 Image(systemName: item.icon)
-                                    .font(.system(size: 26))
-                                    .foregroundColor(item.isEnabled ? Color.orange : Color.gray.opacity(0.6))
+                                    .font(.system(size: 22))
+                                    .foregroundColor(item.isEnabled ? item.color : Color.gray.opacity(0.6))
                             }
 
                             Text(item.title)
@@ -444,7 +444,7 @@ public struct MoreShortcutsSheetView: View {
                     }
                 }
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 16)
 
             Spacer()
         }
