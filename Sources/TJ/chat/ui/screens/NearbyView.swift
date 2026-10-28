@@ -6,7 +6,9 @@ public struct NearbyView: View {
     @State private var selectedCategory: String = "All"
     @State private var showCreatePost = false
     @State private var activeDiscussionPost: NearbyPostItem? = nil
+    @State private var chatRequestTargetPost: NearbyPostItem? = nil
     @State private var showMyPosts = false
+    @State private var showChatRequests = false
 
     private let radiusOptions = [1, 5, 10, 25, 50]
     private let categories = ["All", "Discussions", "Events", "Alerts", "Marketplace"]
@@ -26,22 +28,36 @@ public struct NearbyView: View {
         NavigationStack {
             ZStack(alignment: .bottomTrailing) {
                 VStack(spacing: 0) {
-                    // Header Bar with Location & My Posts
+                    // Top Header Bar
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Nearby Feed")
-                                .font(.system(size: 20, weight: .bold))
+                            HStack(spacing: 6) {
+                                Image(systemName: "antenna.radiowaves.left.and.right")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.blue)
+                                Text("Nearby")
+                                    .font(.system(size: 20, weight: .bold))
+                            }
                             HStack(spacing: 4) {
                                 Image(systemName: "mappin.and.ellipse")
                                     .font(.system(size: 11))
-                                    .foregroundColor(.appAccent)
-                                Text(nearbyManager.selectedAreaName)
+                                    .foregroundColor(.blue)
+                                Text("\(nearbyManager.selectedAreaName) • Within \(selectedRadius) km")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.secondary)
                             }
                         }
 
                         Spacer()
+
+                        Button(action: { showChatRequests = true }) {
+                            Image(systemName: "tray.full.fill")
+                                .font(.system(size: 15))
+                                .foregroundColor(.blue)
+                                .padding(8)
+                                .background(Color.blue.opacity(0.12))
+                                .clipShape(Circle())
+                        }
 
                         Button(action: { showMyPosts = true }) {
                             HStack(spacing: 4) {
@@ -51,7 +67,7 @@ public struct NearbyView: View {
                             .font(.system(size: 13, weight: .semibold))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
-                            .background(Color.accentColor.opacity(0.15))
+                            .background(Color.blue.opacity(0.15))
                             .cornerRadius(16)
                         }
 
@@ -88,7 +104,7 @@ public struct NearbyView: View {
                                         .font(.system(size: 12, weight: isSelected ? .bold : .medium))
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
-                                        .background(isSelected ? Color.accentColor : Color(UIColor.tertiarySystemFill))
+                                        .background(isSelected ? Color.blue : Color(UIColor.tertiarySystemFill))
                                         .foregroundColor(isSelected ? .white : .primary)
                                         .cornerRadius(14)
                                 }
@@ -97,7 +113,7 @@ public struct NearbyView: View {
                         .padding(.vertical, 6)
                     }
 
-                    // Category Filters
+                    // Category Filter Pills
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(categories, id: \.self) { cat in
@@ -119,7 +135,7 @@ public struct NearbyView: View {
 
                     Divider()
 
-                    // Posts List
+                    // Main Posts List
                     if nearbyManager.isLoading && nearbyManager.posts.isEmpty {
                         Spacer()
                         ProgressView("Loading nearby posts...")
@@ -132,7 +148,7 @@ public struct NearbyView: View {
                                 .foregroundColor(.secondary)
                             Text("No nearby posts within \(selectedRadius) km")
                                 .font(.system(size: 16, weight: .semibold))
-                            Text("Be the first to post a neighborhood update or marketplace item!")
+                            Text("Be the first to post a neighborhood update or question around \(nearbyManager.selectedAreaName)!")
                                 .font(.system(size: 13))
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
@@ -149,6 +165,9 @@ public struct NearbyView: View {
                                     },
                                     onReply: {
                                         activeDiscussionPost = post
+                                    },
+                                    onRequestChat: {
+                                        chatRequestTargetPost = post
                                     },
                                     onShare: {
                                         #if canImport(UIKit)
@@ -167,7 +186,7 @@ public struct NearbyView: View {
                     }
                 }
 
-                // Primary FAB: Post +
+                // Floating Action Button: Post +
                 Button(action: { showCreatePost = true }) {
                     HStack(spacing: 6) {
                         Image(systemName: "plus")
@@ -177,7 +196,7 @@ public struct NearbyView: View {
                     }
                     .padding(.horizontal, 18)
                     .padding(.vertical, 12)
-                    .background(Color.accentColor)
+                    .background(Color.blue)
                     .foregroundColor(.white)
                     .cornerRadius(28)
                     .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
@@ -200,8 +219,19 @@ public struct NearbyView: View {
             .sheet(item: $activeDiscussionPost) { post in
                 NearbyDiscussionThreadView(post: post)
             }
+            .sheet(item: $chatRequestTargetPost) { post in
+                PrivateChatRequestSheet(post: post) { msg in
+                    Task {
+                        _ = await nearbyManager.sendChatRequest(postId: post.id, message: msg)
+                        chatRequestTargetPost = nil
+                    }
+                }
+            }
             .sheet(isPresented: $showMyPosts) {
                 MyNearbyPostsView()
+            }
+            .sheet(isPresented: $showChatRequests) {
+                NearbyChatRequestsView()
             }
         }
     }
@@ -211,6 +241,7 @@ struct NearbyPostCard: View {
     let post: NearbyPostItem
     var onLike: () -> Void
     var onReply: () -> Void
+    var onRequestChat: () -> Void
     var onShare: () -> Void
 
     var body: some View {
@@ -219,7 +250,7 @@ struct NearbyPostCard: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color.accentColor)
+                        .fill(Color.blue)
                         .frame(width: 40, height: 40)
                     Text(String(post.authorName.prefix(1)).uppercased())
                         .font(.system(size: 16, weight: .bold))
@@ -238,11 +269,21 @@ struct NearbyPostCard: View {
                             .foregroundColor(.secondary)
                         Text(String(format: "%.1f km away", post.distanceKm))
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.accentColor)
+                            .foregroundColor(.blue)
                     }
                 }
 
                 Spacer()
+
+                if post.isResolved {
+                    Text("Resolved")
+                        .font(.caption2.bold())
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.green.opacity(0.15))
+                        .foregroundColor(.green)
+                        .cornerRadius(6)
+                }
             }
 
             // Post Content
@@ -292,17 +333,13 @@ struct NearbyPostCard: View {
                     }
                 }
 
-                Button(action: {
-                    Task {
-                        _ = try? await API.data("nearby/requests", method: "POST", json: ["post_id": post.id, "message": "Inquiry regarding your nearby post"])
-                    }
-                }) {
+                Button(action: onRequestChat) {
                     HStack(spacing: 4) {
-                        Image(systemName: "paperplane")
-                            .foregroundColor(.accentColor)
+                        Image(systemName: "paperplane.fill")
+                            .foregroundColor(.blue)
                         Text("Request Chat")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.accentColor)
+                            .foregroundColor(.blue)
                     }
                 }
 
@@ -318,6 +355,49 @@ struct NearbyPostCard: View {
         .padding(14)
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(16)
+    }
+}
+
+struct PrivateChatRequestSheet: View {
+    let post: NearbyPostItem
+    let onSend: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var message: String = ""
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Message \(post.authorName) Privately")
+                    .font(.title3.bold())
+
+                Text("Regarding post: \"\(post.content)\"")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+
+                TextEditor(text: $message)
+                    .padding(8)
+                    .background(Color(UIColor.tertiarySystemFill))
+                    .cornerRadius(12)
+
+                Spacer()
+            }
+            .padding(16)
+            .navigationTitle("Request Chat")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Send") {
+                        onSend(message)
+                        dismiss()
+                    }
+                    .disabled(message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
     }
 }
 
@@ -405,6 +485,7 @@ struct NearbyDiscussionThreadView: View {
                             post: post,
                             onLike: {},
                             onReply: {},
+                            onRequestChat: {},
                             onShare: {}
                         )
 
@@ -496,9 +577,19 @@ struct MyNearbyPostsView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(post.content)
                                 .font(.system(size: 15, weight: .semibold))
-                            Text("Area: \(post.areaName) • Likes: \(post.likeCount) • Replies: \(post.replyCount)")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
+                            HStack {
+                                Text("Area: \(post.areaName) • Likes: \(post.likeCount) • Replies: \(post.replyCount)")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Button(post.isResolved ? "Resolved" : "Mark Resolved") {
+                                    Task {
+                                        _ = await nearbyManager.resolvePost(postId: post.id, isResolved: !post.isResolved)
+                                    }
+                                }
+                                .font(.caption.bold())
+                                .foregroundColor(post.isResolved ? .green : .blue)
+                            }
                         }
                     }
                     .onDelete { indexSet in
@@ -517,6 +608,61 @@ struct MyNearbyPostsView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
                 }
+            }
+            .task {
+                await nearbyManager.fetchMyPosts()
+            }
+        }
+    }
+}
+
+struct NearbyChatRequestsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var nearbyManager = NearbyManager.shared
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if nearbyManager.chatRequests.isEmpty {
+                    Text("No message requests.")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                        .padding()
+                } else {
+                    ForEach(nearbyManager.chatRequests) { req in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("From \(req.senderName)").font(.headline)
+                            Text("Regarding: \"\(req.postSnippet)\"").font(.caption).foregroundColor(.secondary)
+                            Text(req.message).font(.subheadline)
+
+                            HStack(spacing: 12) {
+                                Button("Decline") {
+                                    Task { _ = await nearbyManager.respondChatRequest(requestId: req.id, accept: false) }
+                                }
+                                .foregroundColor(.red)
+
+                                Spacer()
+
+                                Button("Accept") {
+                                    Task { _ = await nearbyManager.respondChatRequest(requestId: req.id, accept: true) }
+                                }
+                                .fontWeight(.bold)
+                                .foregroundColor(.green)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+            }
+            .navigationTitle("Message Requests")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
+            .task {
+                await nearbyManager.fetchChatRequests()
             }
         }
     }
