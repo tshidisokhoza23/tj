@@ -372,7 +372,7 @@ public struct CustomMainBottomBar: View {
 // MARK: - More Shortcuts Sheet View with Court / Mingle shortcut
 
 public enum MoreShortcutRoute: String, Identifiable {
-    case mingle, nearby, news, rewards, contests, stream, ride, jobs, vocab, wallet, profile, settings, files, calendar
+    case mingle, nearby, news, rewards, contests, stream, ride, jobs, vocab, wallet, profile, settings, files, calendar, rent, services, market
     public var id: String { rawValue }
 }
 
@@ -386,15 +386,19 @@ public struct MoreShortcutsSheetView: View {
     }
 
     private let shortcuts: [(route: MoreShortcutRoute, title: String, icon: String, color: Color, isEnabled: Bool)] = [
-        (.contests, "Contests", "trophy.fill", Color.yellow, true),
-        (.rewards, "Rewards", "star.fill", Color.orange, true),
-        (.news, "News", "newspaper.fill", Color.red, true),
-        (.nearby, "Nearby", "mappin.and.ellipse", Color.teal, true),
         (.mingle, "Friends", "sparkles", Color.purple, true),
         (.wallet, "Wallet", "creditcard.fill", Color(red: 1.0, green: 0.8, blue: 0.4), true),
-        (.files, "Files", "folder.fill", Color.yellow, true),
-        (.calendar, "Calendar", "calendar", Color.pink, true),
-        (.vocab, "Vocab", "book.fill", Color.blue, true)
+        (.news, "News", "newspaper.fill", Color.red, true),
+        (.contests, "Contests", "trophy.fill", Color.yellow, true),
+        (.rewards, "Rewards", "star.fill", Color.orange, true),
+        (.nearby, "Nearby", "mappin.and.ellipse", Color.teal, true),
+        (.vocab, "Vocab", "book.fill", Color.blue, true),
+        (.stream, "Stream", "music.note", Color.purple, true),
+        (.ride, "Ride", "car.fill", Color.cyan, true),
+        (.jobs, "Jobs", "briefcase.fill", Color.green, true),
+        (.rent, "Rent", "building.2.fill", Color.indigo, true),
+        (.services, "Services", "wrench.and.screwdriver.fill", Color.teal, true),
+        (.market, "Market", "storefront.fill", Color.orange, true)
     ]
 
     public var body: some View {
