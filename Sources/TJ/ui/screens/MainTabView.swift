@@ -306,17 +306,17 @@ public struct MainTabView: View {
             case .calendar:
                 MonthCalendarView()
             case .rent:
-                BoardView(board: "rent", onBack: { activeSheetRoute = nil }, onChat: { chatId in
+                RentView(onBack: { activeSheetRoute = nil }, onChat: { chatId in
                     activeSheetRoute = nil
                     router.navigate(to: .chatDetail(conversationId: chatId, participantName: nil))
                 })
             case .services:
-                BoardView(board: "services", onBack: { activeSheetRoute = nil }, onChat: { chatId in
+                ServicesView(onBack: { activeSheetRoute = nil }, onChat: { chatId in
                     activeSheetRoute = nil
                     router.navigate(to: .chatDetail(conversationId: chatId, participantName: nil))
                 })
             case .market:
-                BoardView(board: "market", onBack: { activeSheetRoute = nil }, onChat: { chatId in
+                MarketView(onBack: { activeSheetRoute = nil }, onChat: { chatId in
                     activeSheetRoute = nil
                     router.navigate(to: .chatDetail(conversationId: chatId, participantName: nil))
                 })

@@ -5,23 +5,90 @@ public struct BoardCopy {
     public let noun: String
     public let priceHint: String
     public let action: String
+    public let yourHeader: String
+    public let filters: [String]
 
-    public init(title: String, noun: String, priceHint: String, action: String) {
+    public init(title: String, noun: String, priceHint: String, action: String, yourHeader: String, filters: [String]) {
         self.title = title
         self.noun = noun
         self.priceHint = priceHint
         self.action = action
+        self.yourHeader = yourHeader
+        self.filters = filters
     }
 }
 
 public func getBoardCopy(_ board: String) -> BoardCopy {
     switch board {
     case "rent":
-        return BoardCopy(title: "Rooms available", noun: "room", priceHint: "R3,500 / month", action: "Ask about this room")
+        return BoardCopy(
+            title: "Rooms available",
+            noun: "room",
+            priceHint: "R3,500 / month",
+            action: "Ask about this room",
+            yourHeader: "Your rooms",
+            filters: ["Nearest", "Under R1500", "With Parking"]
+        )
     case "services":
-        return BoardCopy(title: "Handyman services", noun: "service", priceHint: "From R250", action: "Request this service")
+        return BoardCopy(
+            title: "Handyman services",
+            noun = "service",
+            priceHint: "From R250",
+            action: "Request this service",
+            yourHeader: "Your services",
+            filters: ["Nearest", "Plumbers", "Electricians"]
+        )
     default:
-        return BoardCopy(title: "Second-hand market", noun: "item", priceHint: "R150", action: "Message seller")
+        return BoardCopy(
+            title: "Second-hand market",
+            noun: "item",
+            priceHint: "R150",
+            action: "Message seller",
+            yourHeader: "Your listings",
+            filters: ["Nearby (5km)", "Appliances", "Clothes"]
+        )
+    }
+}
+
+public struct RentView: View {
+    public var onBack: () -> Void
+    public var onChat: (String) -> Void
+
+    public init(onBack: @escaping () -> Void = {}, onChat: @escaping (String) -> Void = { _ in }) {
+        self.onBack = onBack
+        self.onChat = onChat
+    }
+
+    public var body: some View {
+        BoardView(board: "rent", onBack: onBack, onChat: onChat)
+    }
+}
+
+public struct ServicesView: View {
+    public var onBack: () -> Void
+    public var onChat: (String) -> Void
+
+    public init(onBack: @escaping () -> Void = {}, onChat: @escaping (String) -> Void = { _ in }) {
+        self.onBack = onBack
+        self.onChat = onChat
+    }
+
+    public var body: some View {
+        BoardView(board: "services", onBack: onBack, onChat: onChat)
+    }
+}
+
+public struct MarketView: View {
+    public var onBack: () -> Void
+    public var onChat: (String) -> Void
+
+    public init(onBack: @escaping () -> Void = {}, onChat: @escaping (String) -> Void = { _ in }) {
+        self.onBack = onBack
+        self.onChat = onChat
+    }
+
+    public var body: some View {
+        BoardView(board: "market", onBack: onBack, onChat: onChat)
     }
 }
 
@@ -103,6 +170,7 @@ public struct BoardView: View {
 
     @StateObject private var viewModel = BoardViewModel()
     @State private var query: String = ""
+    @State private var selectedFilter: Int = 0
     @State private var posting: Bool = false
     @State private var title: String = ""
     @State private var details: String = ""
@@ -116,6 +184,10 @@ public struct BoardView: View {
         getBoardCopy(board)
     }
 
+    private let tealAccent = Color(red: 0.0, green: 0.82, blue: 0.71)
+    private let tealSelectedBg = Color(red: 0.06, green: 0.30, blue: 0.27)
+    private let darkCardBg = Color(red: 0.09, green: 0.13, blue: 0.17)
+
     public init(board: String, onBack: @escaping () -> Void = {}, onChat: @escaping (String) -> Void = { _ in }) {
         self.board = board
         self.onBack = onBack
@@ -127,13 +199,42 @@ public struct BoardView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     // Search Bar
-                    HStack {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.gray)
                         TextField("Search area or title", text: $query)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                        Button("Search") {
-                            viewModel.load(query: query)
+                            .onChange(of: query) { newValue in
+                                viewModel.load(query: newValue)
+                            }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(Color(UIColor.tertiarySystemFill))
+                    .clipShape(Capsule())
+
+                    // Filter Chips Bar
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Array(copy.filters.enumerated()), id: \.offset) { index, filter in
+                                let isSelected = selectedFilter == index
+                                Button(action: {
+                                    selectedFilter = index
+                                    viewModel.load(query: index == 0 ? query : filter)
+                                }) {
+                                    Text("[ \(filter) ]")
+                                        .font(.system(size: 13, weight: isSelected ? .bold : .medium))
+                                        .foregroundColor(isSelected ? tealAccent : .primary)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(isSelected ? tealSelectedBg : Color(UIColor.tertiarySystemFill))
+                                        .clipShape(Capsule())
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(isSelected ? tealAccent : Color.gray.opacity(0.3), lineWidth: 1)
+                                        )
+                                }
+                            }
                         }
-                        .buttonStyle(.borderedProminent)
                     }
 
                     if !viewModel.message.isEmpty {
@@ -182,33 +283,42 @@ public struct BoardView: View {
                             }
                         }
                         .padding(12)
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(12)
+                        .background(darkCardBg)
+                        .cornerRadius(16)
                     }
 
-                    // Your Listings
+                    // Your Listings / Services / Rooms
                     if !viewModel.mine.isEmpty {
-                        Text("Your listings")
-                            .font(.headline)
-                        ForEach(viewModel.mine) { item in
-                            ListingCardView(item: item, actionLabel: "Mark unavailable") {
-                                viewModel.close(id: item.id)
+                        Text(copy.yourHeader)
+                            .font(.system(size: 18, weight: .bold))
+
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                            ForEach(viewModel.mine) { item in
+                                ListingCardView(
+                                    item: item,
+                                    actionLabel: "Mark unavailable",
+                                    onActionClick: { viewModel.close(id: item.id) },
+                                    onClick: { selectedItem = item }
+                                )
                             }
                         }
                     }
 
                     // Available Listings
                     Text("Available")
-                        .font(.headline)
+                        .font(.system(size: 18, weight: .bold))
 
                     if viewModel.items.isEmpty {
                         Text("Nothing is listed yet. Be the first to post.")
                             .foregroundColor(.secondary)
                             .padding(.vertical, 8)
                     } else {
-                        ForEach(viewModel.items) { item in
-                            ListingCardView(item: item, actionLabel: "View") {
-                                selectedItem = item
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                            ForEach(viewModel.items) { item in
+                                ListingCardView(
+                                    item: item,
+                                    onClick: { selectedItem = item }
+                                )
                             }
                         }
                     }
@@ -224,8 +334,10 @@ public struct BoardView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(posting ? "Close" : "Post") {
-                        posting.toggle()
+                    Button(action: { posting.toggle() }) {
+                        Text(posting ? "Close" : "Post")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.blue)
                     }
                 }
             }
@@ -249,7 +361,7 @@ public struct BoardView: View {
 
                             Text("\(item.priceLabel.isEmpty ? "Price on request" : item.priceLabel) • \(item.area.isEmpty ? "Area not set" : item.area)")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(tealAccent)
 
                             Text(item.description)
                                 .font(.body)
@@ -301,50 +413,77 @@ public struct BoardView: View {
 
 public struct ListingCardView: View {
     public let item: BoardListing
-    public let actionLabel: String
-    public let action: () -> Void
+    public var actionLabel: String? = nil
+    public var onActionClick: (() -> Void)? = nil
+    public let onClick: () -> Void
 
-    public init(item: BoardListing, actionLabel: String, action: @escaping () -> Void) {
+    private let tealAccent = Color(red: 0.0, green: 0.82, blue: 0.71)
+    private let darkCardBg = Color(red: 0.09, green: 0.13, blue: 0.17)
+
+    public init(
+        item: BoardListing,
+        actionLabel: String? = nil,
+        onActionClick: (() -> Void)? = nil,
+        onClick: @escaping () -> Void
+    ) {
         self.item = item
         self.actionLabel = actionLabel
-        self.action = action
+        self.onActionClick = onActionClick
+        self.onClick = onClick
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             if !item.photoUrl.isEmpty, let url = URL(string: item.photoUrl) {
                 AsyncImage(url: url) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    Color.gray.opacity(0.2)
+                    Rectangle().fill(Color.gray.opacity(0.2))
                 }
-                .frame(height: 140)
+                .frame(height: 125)
                 .clipped()
-                .cornerRadius(8)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            } else {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(height: 125)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
             }
 
-            Text(item.title)
-                .font(.headline)
+            VStack(alignment: .leading, spacing: 4) {
+                if !item.priceLabel.isEmpty {
+                    Text(item.priceLabel)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(tealAccent)
+                }
 
-            Text("\(item.priceLabel.isEmpty ? "Price on request" : item.priceLabel) • \(item.area.isEmpty ? "Area not set" : item.area)")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                Text(item.title)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
 
-            if !item.description.isEmpty {
-                Text(item.description)
-                    .font(.caption)
+                let subtitle = [item.sellerName, item.area].filter { !$0.isEmpty }.joined(separator: " · ")
+                Text(subtitle.isEmpty ? "Gauteng" : subtitle)
+                    .font(.system(size: 13))
                     .foregroundColor(.secondary)
-                    .lineLimit(2)
-            }
+                    .lineLimit(1)
 
-            HStack {
-                Spacer()
-                Button(actionLabel, action: action)
-                    .font(.footnote.bold())
+                if let actionLabel = actionLabel, let onActionClick = onActionClick {
+                    Button(action: onActionClick) {
+                        Text(actionLabel)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.blue)
+                    }
+                    .padding(.top, 4)
+                }
             }
+            .padding(12)
         }
-        .padding(12)
-        .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(12)
+        .background(darkCardBg)
+        .cornerRadius(16)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onClick()
+        }
     }
 }
