@@ -65,8 +65,8 @@ private struct JobDetailDestinationView: View {
                 JobDetailView(
                     job: job,
                     onBack: { path.removeLast() },
-                    onApply: {
-                        viewModel.applyForJob(jobId: job.id, jobTitle: job.title, companyName: job.companyName)
+                    onApply: { coverNote in
+                        viewModel.applyForJob(jobId: job.id, jobTitle: job.title, companyName: job.companyName, coverNote: coverNote)
                     },
                     onExternalApplyClick: { id in
                         viewModel.markClickedExternal(jobId: id)

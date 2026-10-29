@@ -644,10 +644,19 @@ struct DriverDocumentsSheet: View {
     var body: some View {
         NavigationStack {
             List(documents) { doc in
-                HStack {
-                    Text(doc.type).font(.headline)
-                    Spacer()
-                    Text(doc.status).font(.caption.bold()).foregroundColor(.green)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(doc.type).font(.headline)
+                        Spacer()
+                        Text(doc.status)
+                            .font(.caption.bold())
+                            .foregroundColor(doc.status == "APPROVED" ? .green : (doc.status == "REJECTED" ? .red : .orange))
+                    }
+                    if doc.status == "REJECTED", let reason = doc.rejectionReason, !reason.isEmpty {
+                        Text("Reason: \(reason)")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
                 }
             }
             .navigationTitle("Documents")

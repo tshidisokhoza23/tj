@@ -104,13 +104,20 @@ public struct DriverDocument: Identifiable, Codable, Equatable {
     public let id: String
     public let type: String
     public let status: String
-    public let url: String
+    public let url: String?
+    public let rejectionReason: String?
 
-    public init(id: String, type: String, status: String, url: String) {
+    enum CodingKeys: String, CodingKey {
+        case id, type, status, url
+        case rejectionReason = "rejection_reason"
+    }
+
+    public init(id: String, type: String, status: String, url: String? = nil, rejectionReason: String? = nil) {
         self.id = id
         self.type = type
         self.status = status
         self.url = url
+        self.rejectionReason = rejectionReason
     }
 }
 

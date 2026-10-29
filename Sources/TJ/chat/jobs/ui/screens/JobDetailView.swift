@@ -3,13 +3,14 @@ import SwiftUI
 public struct JobDetailView: View {
     public let job: Job
     public var onBack: () -> Void
-    public var onApply: () -> Void
+    public var onApply: (String) -> Void
     public var onExternalApplyClick: (String) -> Void = { _ in }
     public var onNavigateToProfile: () -> Void = {}
     public var onReportJob: (String, String) -> Void = { _, _ in }
 
     @State private var showReportDialog = false
     @State private var selectedReason = "Fraudulent or misleading"
+    @State private var coverNote: String = ""
 
     private let reportReasons = [
         "Fraudulent or misleading",
@@ -22,7 +23,7 @@ public struct JobDetailView: View {
     public init(
         job: Job,
         onBack: @escaping () -> Void,
-        onApply: @escaping () -> Void,
+        onApply: @escaping (String) -> Void = { _ in },
         onExternalApplyClick: @escaping (String) -> Void = { _ in },
         onNavigateToProfile: @escaping () -> Void = {},
         onReportJob: @escaping (String, String) -> Void = { _, _ in }
@@ -144,6 +145,17 @@ public struct JobDetailView: View {
                         .padding(.top, 12)
                     }
 
+                    if !job.isExternal && !isAppliedInternal {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Note to employer (optional)")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.secondary)
+                            TextField("Add a note...", text: $coverNote)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                        .padding(.top, 12)
+                    }
+
                     // Apply Button
                     Button(action: {
                         if job.isExternal {
@@ -152,7 +164,7 @@ public struct JobDetailView: View {
                                 CustomTabsHelper.launchUrl(url)
                             }
                         } else {
-                            onApply()
+                            onApply(coverNote.trimmingCharacters(in: .whitespacesAndNewlines))
                         }
                     }) {
                         HStack(spacing: 8) {

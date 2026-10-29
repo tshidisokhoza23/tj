@@ -4,7 +4,7 @@ import Combine
 public protocol JobRepository {
     func getJobs(cursor: String?, limit: Int, jobType: String?, featuredOnly: Bool, location: String?, salaryMin: Double?, postedWithinDays: Int?, category: String?) -> AsyncStream<Resource<[Job]>>
     func searchJobs(query: String, location: String?, salaryMin: Double?, jobType: String?, featuredOnly: Bool, postedWithinDays: Int?, category: String?) -> AsyncStream<Resource<[Job]>>
-    func applyForJob(jobId: String) -> AsyncStream<Resource<String>>
+    func applyForJob(jobId: String, coverNote: String) -> AsyncStream<Resource<String>>
     func saveJob(jobId: String) async -> Resource<Bool>
     func unsaveJob(jobId: String) async -> Resource<Bool>
     func getJobApplications() -> AsyncStream<Resource<[JobApplication]>>
@@ -74,12 +74,12 @@ public final class JobRepositoryImpl: JobRepository, @unchecked Sendable {
         }
     }
 
-    public func applyForJob(jobId: String) -> AsyncStream<Resource<String>> {
+    public func applyForJob(jobId: String, coverNote: String = "") -> AsyncStream<Resource<String>> {
         AsyncStream { continuation in
             Task {
                 continuation.yield(.loading(nil))
                 do {
-                    let response = try await jobApi.applyForJob(jobId: jobId)
+                    let response = try await jobApi.applyForJob(jobId: jobId, coverNote: coverNote)
                     await localStore.updateAppliedStatus(jobId: jobId, isApplied: true)
                     continuation.yield(.success(response.conversationId))
                 } catch {

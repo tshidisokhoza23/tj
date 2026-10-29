@@ -432,6 +432,11 @@ public struct RenewJobRequest: Codable, Sendable {
     public init(package_type: String) { self.package_type = package_type }
 }
 
+public struct ApplyJobRequest: Codable, Sendable {
+    public let cover_note: String
+    public init(cover_note: String = "") { self.cover_note = cover_note }
+}
+
 public struct JobPaymentResponse: Codable, Sendable {
     public let authorization_url: String?
     public let amount_cents: Int?
@@ -535,7 +540,7 @@ public protocol JobApiProtocol: Sendable {
     func getMyJobs() async throws -> JobsResponse
     func closeJob(jobId: String) async throws -> StatusResponse
     func renewJob(jobId: String, packageType: String) async throws -> JobPaymentResponse
-    func applyForJob(jobId: String) async throws -> ConversationResponse
+    func applyForJob(jobId: String, coverNote: String) async throws -> ConversationResponse
     func saveJob(jobId: String) async throws -> StatusResponse
     func unsaveJob(jobId: String) async throws -> StatusResponse
     func getJobApplications() async throws -> JobApplicationsResponse
@@ -600,8 +605,8 @@ public final class JobApi: JobApiProtocol, @unchecked Sendable {
         return try await client.request(path: "jobs/\(jobId)/renew", method: .post, body: RenewJobRequest(package_type: packageType))
     }
 
-    public func applyForJob(jobId: String) async throws -> ConversationResponse {
-        return try await client.request(path: "jobs/\(jobId)/apply", method: .post)
+    public func applyForJob(jobId: String, coverNote: String = "") async throws -> ConversationResponse {
+        return try await client.request(path: "jobs/\(jobId)/apply", method: .post, body: ApplyJobRequest(cover_note: coverNote))
     }
 
     public func saveJob(jobId: String) async throws -> StatusResponse {
@@ -865,5 +870,156 @@ public final class SystemApi: SystemApiService, @unchecked Sendable {
 
     public func resetAds() async throws -> StatusResponse {
         return try await client.request(path: "dev/reset-ads", method: .post)
+    }
+}
+
+// MARK: - Board API DTOs & Services
+
+public struct BoardListing: Codable, Identifiable, Sendable, Equatable {
+    public let id: String
+    public let userId: String
+    public let title: String
+    public let description: String
+    public let priceLabel: String
+    public let area: String
+    public let photoUrl: String
+    public let status: String
+    public let sellerName: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case title, description
+        case priceLabel = "price_label"
+        case area
+        case photoUrl = "photo_url"
+        case status
+        case sellerName = "seller_name"
+    }
+
+    public init(
+        id: String,
+        userId: String = "",
+        title: String = "",
+        description: String = "",
+        priceLabel: String = "",
+        area: String = "",
+        photoUrl: String = "",
+        status: String = "active",
+        sellerName: String = ""
+    ) {
+        self.id = id
+        self.userId = userId
+        self.title = title
+        self.description = description
+        self.priceLabel = priceLabel
+        self.area = area
+        self.photoUrl = photoUrl
+        self.status = status
+        self.sellerName = sellerName
+    }
+}
+
+public struct ListingsResponse: Codable, Sendable {
+    public let listings: [BoardListing]
+    public init(listings: [BoardListing] = []) {
+        self.listings = listings
+    }
+}
+
+public struct ListingResponse: Codable, Sendable {
+    public let listing: BoardListing
+    public init(listing: BoardListing) {
+        self.listing = listing
+    }
+}
+
+public struct CreateListingRequest: Codable, Sendable {
+    public let title: String
+    public let description: String
+    public let priceLabel: String
+    public let area: String
+    public let photoUrl: String
+
+    enum CodingKeys: String, CodingKey {
+        case title, description
+        case priceLabel = "price_label"
+        case area
+        case photoUrl = "photo_url"
+    }
+
+    public init(title: String, description: String, priceLabel: String, area: String, photoUrl: String) {
+        self.title = title
+        self.description = description
+        self.priceLabel = priceLabel
+        self.area = area
+        self.photoUrl = photoUrl
+    }
+}
+
+public struct UpdateListingRequest: Codable, Sendable {
+    public let status: String
+    public init(status: String) {
+        self.status = status
+    }
+}
+
+public struct InterestRequest: Codable, Sendable {
+    public let note: String
+    public init(note: String) {
+        self.note = note
+    }
+}
+
+public struct InterestResponse: Codable, Sendable {
+    public let conversationId: String
+
+    enum CodingKeys: String, CodingKey {
+        case conversationId = "conversation_id"
+    }
+
+    public init(conversationId: String = "") {
+        self.conversationId = conversationId
+    }
+}
+
+public protocol BoardApiProtocol: Sendable {
+    func list(board: String, query: String?) async throws -> ListingsResponse
+    func mine(board: String) async throws -> ListingsResponse
+    func create(board: String, request: CreateListingRequest) async throws -> ListingResponse
+    func update(board: String, id: String, request: UpdateListingRequest) async throws -> StatusResponse
+    func interest(board: String, id: String, request: InterestRequest) async throws -> InterestResponse
+}
+
+public final class BoardApi: BoardApiProtocol, @unchecked Sendable {
+    public static let shared = BoardApi()
+    private let client: NetworkClient
+
+    public init(client: NetworkClient = .shared) {
+        self.client = client
+    }
+
+    public func list(board: String, query: String? = nil) async throws -> ListingsResponse {
+        var params: [String: String] = [:]
+        if let q = query, !q.trimmingCharacters(in: .whitespaces).isEmpty {
+            params["q"] = q
+        }
+        return try await client.request(path: "boards/\(board)", queryItems: params.isEmpty ? nil : params)
+    }
+
+    public func mine(board: String) async throws -> ListingsResponse {
+        return try await client.request(path: "boards/\(board)/mine")
+    }
+
+    public func create(board: String, request: CreateListingRequest) async throws -> ListingResponse {
+        return try await client.request(path: "boards/\(board)", method: .post, body: request)
+    }
+
+    public func update(board: String, id: String, request: UpdateListingRequest) async throws -> StatusResponse {
+        return try await client.request(path: "boards/\(board)/\(id)", method: .patch, body: request)
+    }
+
+    public func interest(board: String, id: String, request: InterestRequest) async throws -> InterestResponse {
+        return try await client.request(path: "boards/\(board)/\(id)/interest", method: .post, body: request)
     }
 }

@@ -228,6 +228,12 @@ public struct MainTabView: View {
                         router.navigate(to: .files)
                     case .calendar:
                         router.navigate(to: .calendar)
+                    case .rent:
+                        activeSheetRoute = .rent
+                    case .services:
+                        activeSheetRoute = .services
+                    case .market:
+                        activeSheetRoute = .market
                     }
                 }
             )
@@ -299,6 +305,21 @@ public struct MainTabView: View {
                 SharedFilesView()
             case .calendar:
                 MonthCalendarView()
+            case .rent:
+                BoardView(board: "rent", onBack: { activeSheetRoute = nil }, onChat: { chatId in
+                    activeSheetRoute = nil
+                    router.navigate(to: .chatDetail(conversationId: chatId, participantName: nil))
+                })
+            case .services:
+                BoardView(board: "services", onBack: { activeSheetRoute = nil }, onChat: { chatId in
+                    activeSheetRoute = nil
+                    router.navigate(to: .chatDetail(conversationId: chatId, participantName: nil))
+                })
+            case .market:
+                BoardView(board: "market", onBack: { activeSheetRoute = nil }, onChat: { chatId in
+                    activeSheetRoute = nil
+                    router.navigate(to: .chatDetail(conversationId: chatId, participantName: nil))
+                })
             }
         }
     }

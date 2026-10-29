@@ -41,10 +41,10 @@ public class JobDetailViewModel: ObservableObject {
         }
     }
 
-    public func applyForJob(jobId: String, jobTitle: String, companyName: String) {
+    public func applyForJob(jobId: String, jobTitle: String, companyName: String, coverNote: String = "") {
         Task {
             self.lastApplyContext = ApplyContext(jobId: jobId, jobTitle: jobTitle, companyName: companyName)
-            for await result in repository.applyForJob(jobId: jobId) {
+            for await result in repository.applyForJob(jobId: jobId, coverNote: coverNote) {
                 self.applyResult = result
             }
         }
