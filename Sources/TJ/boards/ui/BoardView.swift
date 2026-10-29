@@ -32,7 +32,7 @@ public func getBoardCopy(_ board: String) -> BoardCopy {
     case "services":
         return BoardCopy(
             title: "Handyman services",
-            noun = "service",
+            noun: "service",
             priceHint: "From R250",
             action: "Request this service",
             yourHeader: "Your services",
@@ -47,6 +47,19 @@ public func getBoardCopy(_ board: String) -> BoardCopy {
             yourHeader: "Your listings",
             filters: ["Nearby (5km)", "Appliances", "Clothes"]
         )
+    }
+}
+
+public func formatPriceLabel(_ price: String, board: String) -> String {
+    let trimmed = price.trimmingCharacters(in: .whitespaces)
+    if trimmed.isEmpty { return "" }
+    switch board {
+    case "rent":
+        return trimmed.localizedCaseInsensitiveContains("month") ? trimmed : "\(trimmed) / month"
+    case "services":
+        return (trimmed.localizedCaseInsensitiveContains("hr") || trimmed.localizedCaseInsensitiveContains("hour")) ? trimmed : "\(trimmed) / hr"
+    default:
+        return trimmed
     }
 }
 
@@ -288,14 +301,15 @@ public struct BoardView: View {
                     }
 
                     // Your Listings / Services / Rooms
-                    if !viewModel.mine.isEmpty {
-                        Text(copy.yourHeader)
-                            .font(.system(size: 18, weight: .bold))
+                    Text(copy.yourHeader)
+                        .font(.system(size: 18, weight: .bold))
 
+                    if !viewModel.mine.isEmpty {
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                             ForEach(viewModel.mine) { item in
                                 ListingCardView(
                                     item: item,
+                                    board: board,
                                     actionLabel: "Mark unavailable",
                                     onActionClick: { viewModel.close(id: item.id) },
                                     onClick: { selectedItem = item }
@@ -317,6 +331,7 @@ public struct BoardView: View {
                             ForEach(viewModel.items) { item in
                                 ListingCardView(
                                     item: item,
+                                    board: board,
                                     onClick: { selectedItem = item }
                                 )
                             }
@@ -359,7 +374,7 @@ public struct BoardView: View {
                             Text(item.title)
                                 .font(.title2.bold())
 
-                            Text("\(item.priceLabel.isEmpty ? "Price on request" : item.priceLabel) • \(item.area.isEmpty ? "Area not set" : item.area)")
+                            Text("\(formatPriceLabel(item.priceLabel, board: board)) • \(item.area.isEmpty ? "Gauteng" : item.area)")
                                 .font(.subheadline)
                                 .foregroundColor(tealAccent)
 
@@ -413,6 +428,7 @@ public struct BoardView: View {
 
 public struct ListingCardView: View {
     public let item: BoardListing
+    public let board: String
     public var actionLabel: String? = nil
     public var onActionClick: (() -> Void)? = nil
     public let onClick: () -> Void
@@ -422,11 +438,13 @@ public struct ListingCardView: View {
 
     public init(
         item: BoardListing,
+        board: String,
         actionLabel: String? = nil,
         onActionClick: (() -> Void)? = nil,
         onClick: @escaping () -> Void
     ) {
         self.item = item
+        self.board = board
         self.actionLabel = actionLabel
         self.onActionClick = onActionClick
         self.onClick = onClick
@@ -450,9 +468,10 @@ public struct ListingCardView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 16))
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                if !item.priceLabel.isEmpty {
-                    Text(item.priceLabel)
+            VStack(alignment: .leading, spacing: 2) {
+                let displayPrice = formatPriceLabel(item.priceLabel, board: board)
+                if !displayPrice.isEmpty {
+                    Text(displayPrice)
                         .font(.system(size: 17, weight: .bold))
                         .foregroundColor(tealAccent)
                 }
@@ -462,8 +481,14 @@ public struct ListingCardView: View {
                     .foregroundColor(.primary)
                     .lineLimit(1)
 
-                let subtitle = [item.sellerName, item.area].filter { !$0.isEmpty }.joined(separator: " · ")
-                Text(subtitle.isEmpty ? "Gauteng" : subtitle)
+                if !item.sellerName.isEmpty && item.sellerName != item.title {
+                    Text(item.sellerName)
+                        .font(.system(size: 13))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                }
+
+                Text(item.area.isEmpty ? "Gauteng" : item.area)
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
