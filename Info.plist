@@ -16,8 +16,6 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
-	<key>NSContactsUsageDescription</key>
-	<string>TJ uses your contacts to find friends who are already on TJ and help you connect with them easily.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -33,16 +31,16 @@
 	<string>1</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<key>GIDClientID</key>
+	<string>303703683011-6ksjg0b8uakesl9a821ri05tokrg41f2.apps.googleusercontent.com</string>
+	<key>GIDServerClientID</key>
+	<string>303703683011-g2p7atop0uackslr2eq9fnsja5jlfk7u.apps.googleusercontent.com</string>
 	<key>TJAdBannerUnit</key>
 	<string>ca-app-pub-3940256099942544/2934735716</string>
 	<key>TJAdNativeUnit</key>
 	<string>ca-app-pub-3940256099942544/3986624511</string>
 	<key>TJAdRewardedUnit</key>
 	<string>ca-app-pub-3940256099942544/1712485313</string>
-	<key>GIDClientID</key>
-	<string>303703683011-6ksjg0b8uakesl9a821ri05tokrg41f2.apps.googleusercontent.com</string>
-	<key>GIDServerClientID</key>
-	<string>303703683011-g2p7atop0uackslr2eq9fnsja5jlfk7u.apps.googleusercontent.com</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
